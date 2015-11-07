@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.DocumentationRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.Diagnostics;
@@ -8,22 +12,15 @@
     using Xunit;
 
     /// <summary>
-    /// This class contains unit tests for <see cref="SA1605PartialElementDocumentationMustHaveSummary"/>-
+    /// This class contains unit tests for <see cref="SA1605PartialElementDocumentationMustHaveSummary"/>.
     /// </summary>
-    public class SA1605UnitTests : CodeFixVerifier
+    public class SA1605UnitTests : DiagnosticVerifier
     {
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
         [Theory]
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeNoDocumentation(string typeName)
+        public async Task TestTypeNoDocumentationAsync(string typeName)
         {
             var testCode = @"
 partial {0} TypeName
@@ -36,7 +33,7 @@ partial {0} TypeName
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithSummaryDocumentation(string typeName)
+        public async Task TestTypeWithSummaryDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <summary>
@@ -52,7 +49,7 @@ partial {0} TypeName
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithContentDocumentation(string typeName)
+        public async Task TestTypeWithContentDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <content>
@@ -68,7 +65,7 @@ partial {0} TypeName
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithInheritedDocumentation(string typeName)
+        public async Task TestTypeWithInheritedDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <inheritdoc/>
@@ -82,7 +79,7 @@ partial {0} TypeName
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithoutDocumentation(string typeName)
+        public async Task TestTypeWithoutDocumentationAsync(string typeName)
         {
             var testCode = @"
 ///
@@ -96,8 +93,25 @@ TypeName
             await this.VerifyCSharpDiagnosticAsync(string.Format(testCode, typeName), expected, CancellationToken.None).ConfigureAwait(false);
         }
 
+        [Theory]
+        [InlineData("enum")]
+        [InlineData("class")]
+        [InlineData("struct")]
+        [InlineData("interface")]
+        public async Task TestNonPartialTypeWithoutDocumentationAsync(string typeName)
+        {
+            var testCode = @"
+///
+{0}
+TypeName
+{{
+}}";
+
+            await this.VerifyCSharpDiagnosticAsync(string.Format(testCode, typeName), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+        }
+
         [Fact]
-        public async Task TestMethodNoDocumentation()
+        public async Task TestMethodNoDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -111,7 +125,7 @@ public partial class ClassName
         }
 
         [Fact]
-        public async Task TestMethodWithSummaryDocumentation()
+        public async Task TestMethodWithSummaryDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -128,7 +142,7 @@ public partial class ClassName
         }
 
         [Fact]
-        public async Task TestMethodWithContentDocumentation()
+        public async Task TestMethodWithContentDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -145,7 +159,7 @@ public partial class ClassName
         }
 
         [Fact]
-        public async Task TestMethodWithInheritedDocumentation()
+        public async Task TestMethodWithInheritedDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -160,7 +174,7 @@ public partial class ClassName
         }
 
         [Fact]
-        public async Task TestMethodWithoutDocumentation()
+        public async Task TestMethodWithoutDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -177,9 +191,25 @@ public partial class ClassName
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        [Fact]
+        public async Task TestNonPartialMethodWithoutDocumentationAsync()
         {
-            return new SA1605PartialElementDocumentationMustHaveSummary();
+            var testCode = @"
+/// <summary>
+/// 
+/// </summary>
+public partial class ClassName
+{
+    ///
+    public void Test() { }
+}";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1605PartialElementDocumentationMustHaveSummary();
         }
     }
 }

@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.SpacingRules
 {
+    using System.Collections.Generic;
     using Microsoft.CodeAnalysis.CodeFixes;
     using Microsoft.CodeAnalysis.Diagnostics;
     using StyleCop.Analyzers.SpacingRules;
@@ -14,14 +18,14 @@
             }
         }
 
-        protected override CodeFixProvider GetCSharpCodeFixProvider()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1021CodeFixProvider();
+            yield return new SA1021NegativeSignsMustBeSpacedCorrectly();
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override CodeFixProvider GetCSharpCodeFixProvider()
         {
-            return new SA1021NegativeSignsMustBeSpacedCorrectly();
+            return new TokenSpacingCodeFixProvider();
         }
     }
 }

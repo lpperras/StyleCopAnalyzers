@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.Test.MaintainabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.MaintainabilityRules
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -9,8 +12,10 @@
     using TestHelper;
     using Xunit;
 
-    public abstract class DebugMessagesUnitTestsBase : CodeFixVerifier
+    public abstract class DebugMessagesUnitTestsBase : DiagnosticVerifier
     {
+        protected bool IncludeSystemDll { get; set; } = true;
+
         protected abstract string MethodName
         {
             get;
@@ -22,26 +27,19 @@
         }
 
         [Fact]
-        public async Task TestEmptySource()
+        public async Task TestConstantMessage_Field_PassAsync()
         {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.TestConstantMessage_Field_PassAsync("\" foo \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Field_Pass()
+        public async Task TestConstantMessage_Field_PassExpressionAsync()
         {
-            await this.TestConstantMessage_Field_Pass("\" foo \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Field_PassAsync("\" \" + \"foo\" + \" \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Field_PassExpression()
-        {
-            await this.TestConstantMessage_Field_Pass("\" \" + \"foo\" + \" \"").ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestConstantMessage_Field_PassWrongType()
+        public async Task TestConstantMessage_Field_PassWrongTypeAsync()
         {
             DiagnosticResult[] expected =
             {
@@ -54,23 +52,23 @@
                 }
             };
 
-            await this.TestConstantMessage_Field_Pass("3", expected).ConfigureAwait(false);
+            await this.TestConstantMessage_Field_PassAsync("3", expected).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Local_Pass()
+        public async Task TestConstantMessage_Local_PassAsync()
         {
-            await this.TestConstantMessage_Local_Pass("\" foo \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Local_PassAsync("\" foo \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Local_PassExpression()
+        public async Task TestConstantMessage_Local_PassExpressionAsync()
         {
-            await this.TestConstantMessage_Local_Pass("\" \" + \"foo\" + \" \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Local_PassAsync("\" \" + \"foo\" + \" \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Local_PassWrongType()
+        public async Task TestConstantMessage_Local_PassWrongTypeAsync()
         {
             DiagnosticResult[] expected =
             {
@@ -83,23 +81,23 @@
                 }
             };
 
-            await this.TestConstantMessage_Local_Pass("3", expected).ConfigureAwait(false);
+            await this.TestConstantMessage_Local_PassAsync("3", expected).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Inline_Pass()
+        public async Task TestConstantMessage_Inline_PassAsync()
         {
-            await this.TestConstantMessage_Inline_Pass("\" foo \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Inline_PassAsync("\" foo \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Inline_PassExpression()
+        public async Task TestConstantMessage_Inline_PassExpressionAsync()
         {
-            await this.TestConstantMessage_Inline_Pass("\" \" + \"foo\" + \" \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Inline_PassAsync("\" \" + \"foo\" + \" \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Inline_PassWrongType()
+        public async Task TestConstantMessage_Inline_PassWrongTypeAsync()
         {
             DiagnosticResult[] expected =
             {
@@ -112,177 +110,83 @@
                 }
             };
 
-            await this.TestConstantMessage_Inline_Pass("3", expected).ConfigureAwait(false);
+            await this.TestConstantMessage_Inline_PassAsync("3", expected).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Field_FailNull()
+        public async Task TestConstantMessage_Field_FailNullAsync()
         {
-            await this.TestConstantMessage_Field_Fail("null").ConfigureAwait(false);
+            await this.TestConstantMessage_Field_FailAsync("null").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Field_FailEmpty()
+        public async Task TestConstantMessage_Field_FailEmptyAsync()
         {
-            await this.TestConstantMessage_Field_Fail("\"\"").ConfigureAwait(false);
+            await this.TestConstantMessage_Field_FailAsync("\"\"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Field_FailWhitespace()
+        public async Task TestConstantMessage_Field_FailWhitespaceAsync()
         {
-            await this.TestConstantMessage_Field_Fail("\"  \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Field_FailAsync("\"  \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Field_FailExpressionWhitespace()
+        public async Task TestConstantMessage_Field_FailExpressionWhitespaceAsync()
         {
-            await this.TestConstantMessage_Field_Fail("\"  \" + \"  \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Field_FailAsync("\"  \" + \"  \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Local_FailNull()
+        public async Task TestConstantMessage_Local_FailNullAsync()
         {
-            await this.TestConstantMessage_Local_Fail("null").ConfigureAwait(false);
+            await this.TestConstantMessage_Local_FailAsync("null").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Local_FailEmpty()
+        public async Task TestConstantMessage_Local_FailEmptyAsync()
         {
-            await this.TestConstantMessage_Local_Fail("\"\"").ConfigureAwait(false);
+            await this.TestConstantMessage_Local_FailAsync("\"\"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Local_FailWhitespace()
+        public async Task TestConstantMessage_Local_FailWhitespaceAsync()
         {
-            await this.TestConstantMessage_Local_Fail("\"  \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Local_FailAsync("\"  \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Local_FailExpressionWhitespace()
+        public async Task TestConstantMessage_Local_FailExpressionWhitespaceAsync()
         {
-            await this.TestConstantMessage_Local_Fail("\"  \" + \"  \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Local_FailAsync("\"  \" + \"  \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Inline_FailNull()
+        public async Task TestConstantMessage_Inline_FailNullAsync()
         {
-            await this.TestConstantMessage_Inline_Fail("null").ConfigureAwait(false);
+            await this.TestConstantMessage_Inline_FailAsync("null").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Inline_FailEmpty()
+        public async Task TestConstantMessage_Inline_FailEmptyAsync()
         {
-            await this.TestConstantMessage_Inline_Fail("\"\"").ConfigureAwait(false);
+            await this.TestConstantMessage_Inline_FailAsync("\"\"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Inline_FailWhitespace()
+        public async Task TestConstantMessage_Inline_FailWhitespaceAsync()
         {
-            await this.TestConstantMessage_Inline_Fail("\"  \"").ConfigureAwait(false);
+            await this.TestConstantMessage_Inline_FailAsync("\"  \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstantMessage_Inline_FailExpressionWhitespace()
+        public async Task TestConstantMessage_Inline_FailExpressionWhitespaceAsync()
         {
-            await this.TestConstantMessage_Inline_Fail("\"  \" + \"  \"").ConfigureAwait(false);
-        }
-
-        private async Task TestConstantMessage_Field_Pass(string argument, params DiagnosticResult[] expected)
-        {
-            var testCodeFormat = @"using System.Diagnostics;
-public class Foo
-{{{{
-    const string message = {{0}};
-    public void Bar()
-    {{{{
-        Debug.{0}({1}message);
-    }}}}
-}}}}";
-
-            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private async Task TestConstantMessage_Local_Pass(string argument, params DiagnosticResult[] expected)
-        {
-            var testCodeFormat = @"using System.Diagnostics;
-public class Foo
-{{{{
-    public void Bar()
-    {{{{
-        const string message = {{0}};
-        Debug.{0}({1}message);
-    }}}}
-}}}}";
-
-            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private async Task TestConstantMessage_Inline_Pass(string argument, params DiagnosticResult[] expected)
-        {
-            var testCodeFormat = @"using System.Diagnostics;
-public class Foo
-{{{{
-    public void Bar()
-    {{{{
-        Debug.{0}({1}{{0}});
-    }}}}
-}}}}";
-
-            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private async Task TestConstantMessage_Field_Fail(string argument)
-        {
-            var testCodeFormat = @"using System.Diagnostics;
-public class Foo
-{{{{
-    const string message = {{0}};
-    public void Bar()
-    {{{{
-        Debug.{0}({1}message);
-    }}}}
-}}}}";
-
-            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 9);
-
-            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private async Task TestConstantMessage_Local_Fail(string argument)
-        {
-            var testCodeFormat = @"using System.Diagnostics;
-public class Foo
-{{{{
-    public void Bar()
-    {{{{
-        const string message = {{0}};
-        Debug.{0}({1}message);
-    }}}}
-}}}}";
-
-            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 9);
-
-            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private async Task TestConstantMessage_Inline_Fail(string argument)
-        {
-            var testCodeFormat = @"using System.Diagnostics;
-public class Foo
-{{{{
-    public void Bar()
-    {{{{
-        Debug.{0}({1}{{0}});
-    }}}}
-}}}}";
-
-            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(6, 9);
-
-            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
+            await this.TestConstantMessage_Inline_FailAsync("\"  \" + \"  \"").ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestNotConstantMessage()
+        public async Task TestNotConstantMessageAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -298,7 +202,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestWrongDebugClass()
+        public async Task TestWrongDebugClassAsync()
         {
             var testCode = @"
 public class Foo
@@ -326,7 +230,7 @@ class Debug
         }
 
         [Fact]
-        public async Task TestWrongMethod()
+        public async Task TestWrongMethodAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -341,7 +245,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestDifferentIdentifiers()
+        public async Task TestDifferentIdentifiersAsync()
         {
             var testCode = @"using System.Diagnostics;
 using static System.Diagnostics.Debug;
@@ -389,6 +293,116 @@ public class Foo
             }
 
             return string.Format(format, this.MethodName, argumentList);
+        }
+
+        protected override Solution CreateSolution(ProjectId projectId, string language)
+        {
+            Solution solution = base.CreateSolution(projectId, language);
+
+            if (this.IncludeSystemDll)
+            {
+                return solution;
+            }
+            else
+            {
+                IEnumerable<MetadataReference> references = solution.Projects.First().MetadataReferences;
+
+                return solution.WithProjectMetadataReferences(solution.ProjectIds[0], references.Where(x => !x.Display.Contains("System.dll")));
+            }
+        }
+
+        private async Task TestConstantMessage_Field_PassAsync(string argument, params DiagnosticResult[] expected)
+        {
+            var testCodeFormat = @"using System.Diagnostics;
+public class Foo
+{{{{
+    const string message = {{0}};
+    public void Bar()
+    {{{{
+        Debug.{0}({1}message);
+    }}}}
+}}}}";
+
+            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private async Task TestConstantMessage_Local_PassAsync(string argument, params DiagnosticResult[] expected)
+        {
+            var testCodeFormat = @"using System.Diagnostics;
+public class Foo
+{{{{
+    public void Bar()
+    {{{{
+        const string message = {{0}};
+        Debug.{0}({1}message);
+    }}}}
+}}}}";
+
+            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private async Task TestConstantMessage_Inline_PassAsync(string argument, params DiagnosticResult[] expected)
+        {
+            var testCodeFormat = @"using System.Diagnostics;
+public class Foo
+{{{{
+    public void Bar()
+    {{{{
+        Debug.{0}({1}{{0}});
+    }}}}
+}}}}";
+
+            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private async Task TestConstantMessage_Field_FailAsync(string argument)
+        {
+            var testCodeFormat = @"using System.Diagnostics;
+public class Foo
+{{{{
+    const string message = {{0}};
+    public void Bar()
+    {{{{
+        Debug.{0}({1}message);
+    }}}}
+}}}}";
+
+            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 9);
+
+            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private async Task TestConstantMessage_Local_FailAsync(string argument)
+        {
+            var testCodeFormat = @"using System.Diagnostics;
+public class Foo
+{{{{
+    public void Bar()
+    {{{{
+        const string message = {{0}};
+        Debug.{0}({1}message);
+    }}}}
+}}}}";
+
+            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 9);
+
+            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private async Task TestConstantMessage_Inline_FailAsync(string argument)
+        {
+            var testCodeFormat = @"using System.Diagnostics;
+public class Foo
+{{{{
+    public void Bar()
+    {{{{
+        Debug.{0}({1}{{0}});
+    }}}}
+}}}}";
+
+            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(6, 9);
+
+            await this.VerifyCSharpDiagnosticAsync(string.Format(this.BuildTestCode(testCodeFormat), argument), expected, CancellationToken.None).ConfigureAwait(false);
         }
     }
 }

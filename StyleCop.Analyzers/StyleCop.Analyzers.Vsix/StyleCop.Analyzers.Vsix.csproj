@@ -36,7 +36,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>2008</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -45,7 +44,10 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>2008</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
+    <CodeAnalysisRuleSet>..\StyleCop.Analyzers.Internal.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
     <StartAction>Program</StartAction>
@@ -53,11 +55,21 @@
     <StartArguments>/rootsuffix Roslyn</StartArguments>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="..\StyleCop.Analyzers.Internal.ruleset">
+      <Link>StyleCop.Analyzers.Internal.ruleset</Link>
+    </None>
+    <None Include="..\StyleCop.Analyzers.ruleset">
+      <Link>StyleCop.Analyzers.ruleset</Link>
+    </None>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\StyleCop.Analyzers.CodeFixes\StyleCop.Analyzers.CodeFixes.csproj">
+      <Project>{f91f7815-4e63-4698-b053-e57b2d707194}</Project>
+      <Name>StyleCop.Analyzers.CodeFixes</Name>
+    </ProjectReference>
     <ProjectReference Include="..\StyleCop.Analyzers\StyleCop.Analyzers.csproj">
       <Project>{3B052737-06CE-4182-AE0F-08EB82DFA73E}</Project>
       <Name>StyleCop.Analyzers</Name>

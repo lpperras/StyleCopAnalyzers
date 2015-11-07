@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -44,7 +48,7 @@
     /// </code>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1643DestructorSummaryDocumentationMustBeginWithStandardText : StandardTextDiagnosticBase
+    internal class SA1643DestructorSummaryDocumentationMustBeginWithStandardText : StandardTextDiagnosticBase
     {
         /// <summary>
         /// The ID for diagnostics produced by the
@@ -53,15 +57,14 @@
         public const string DiagnosticId = "SA1643";
         private const string Title = "Destructor summary documentation must begin with standard text";
         private const string MessageFormat = "Destructor summary documentation must begin with standard text";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "The XML documentation header for a C# finalizer does not contain the appropriate summary text.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1643.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1643.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> DestructorDeclarationAction = HandleDestructor;
 
         /// <summary>
         /// Gets the standard text which is expected to appear at the beginning of the <c>&lt;summary&gt;</c>
@@ -74,38 +77,29 @@
         /// followed by the second element of this array.
         /// </value>
         public static ImmutableArray<string> DestructorStandardText { get; } = ImmutableArray.Create("Finalizes an instance of the ", " class.");
-        
-        /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
 
         /// <inheritdoc/>
-        protected override DiagnosticDescriptor DiagnosticDescriptor
-        {
-            get
-            {
-                return Descriptor;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleDestructor, SyntaxKind.DestructorDeclaration);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleDestructor(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(DestructorDeclarationAction, SyntaxKind.DestructorDeclaration);
+        }
+
+        private static void HandleDestructor(SyntaxNodeAnalysisContext context)
         {
             var destructorDeclaration = context.Node as DestructorDeclarationSyntax;
 
             if (destructorDeclaration != null)
             {
-                this.HandleDeclaration(context, DestructorStandardText[0], DestructorStandardText[1], true);
+                HandleDeclaration(context, DestructorStandardText[0], DestructorStandardText[1], Descriptor);
             }
         }
     }

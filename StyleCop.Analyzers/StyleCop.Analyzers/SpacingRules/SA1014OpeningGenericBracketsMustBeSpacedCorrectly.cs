@@ -1,9 +1,14 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// An opening generic bracket within a C# element is not spaced correctly.
@@ -15,7 +20,7 @@
     /// first or last character on the line.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1014OpeningGenericBracketsMustBeSpacedCorrectly : DiagnosticAnalyzer
+    internal class SA1014OpeningGenericBracketsMustBeSpacedCorrectly : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1014OpeningGenericBracketsMustBeSpacedCorrectly"/>
@@ -24,49 +29,43 @@
         public const string DiagnosticId = "SA1014";
         private const string Title = "Opening generic brackets must be spaced correctly";
         private const string MessageFormat = "Opening generic brackets must not be {0} by a space.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
         private const string Description = "An opening generic bracket within a C# element is not spaced correctly.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1014.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1014.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
             foreach (var token in root.DescendantTokens())
             {
-                switch (token.Kind())
+                if (token.IsKind(SyntaxKind.LessThanToken))
                 {
-                case SyntaxKind.LessThanToken:
-                    this.HandleLessThanToken(context, token);
-                    break;
-
-                default:
-                    break;
+                    HandleLessThanToken(context, token);
                 }
             }
         }
 
-        private void HandleLessThanToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
+        private static void HandleLessThanToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
         {
             if (token.IsMissing)
             {
@@ -84,34 +83,22 @@
                 return;
             }
 
-            bool precededBySpace;
-            bool firstInLine;
-
-            bool followedBySpace;
-
-            firstInLine = token.HasLeadingTrivia || token.GetLocation()?.GetMappedLineSpan().StartLinePosition.Character == 0;
-            if (firstInLine)
-            {
-                precededBySpace = true;
-            }
-            else
-            {
-                SyntaxToken precedingToken = token.GetPreviousToken();
-                precededBySpace = precedingToken.HasTrailingTrivia;
-            }
-
-            followedBySpace = token.HasTrailingTrivia;
+            bool firstInLine = token.IsFirstInLine();
+            bool precededBySpace = firstInLine || token.IsPrecededByWhitespace();
+            bool followedBySpace = token.IsFollowedByWhitespace();
 
             if (!firstInLine && precededBySpace)
             {
                 // Opening generic brackets must not be {preceded} by a space.
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), "preceded"));
+                var properties = TokenSpacingProperties.RemovePreceding;
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, "preceded"));
             }
 
             if (followedBySpace)
             {
                 // Opening generic brackets must not be {followed} by a space.
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), "followed"));
+                var properties = TokenSpacingProperties.RemoveFollowing;
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, "followed"));
             }
         }
     }

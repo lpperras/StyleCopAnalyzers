@@ -1,7 +1,12 @@
-﻿namespace StyleCop.Analyzers.Test.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.DocumentationRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.CodeAnalysis.CodeFixes;
     using Microsoft.CodeAnalysis.Diagnostics;
     using StyleCop.Analyzers.DocumentationRules;
     using TestHelper;
@@ -12,32 +17,25 @@
         private const string DiagnosticId = SA1626SingleLineCommentsMustNotUseDocumentationStyleSlashes.DiagnosticId;
 
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestClassWithXmlComment()
+        public async Task TestClassWithXmlCommentAsync()
         {
             var testCode = @"/// <summary>
-/// Xml Documentation
+/// XML Documentation
 /// </summary>
-public class Foo
+public class TypeName
 {
     public void Bar()
     {
     }
 }
 ";
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMethodWithComment()
+        public async Task TestMethodWithCommentAsync()
         {
-            var testCode = @"public class Foo
+            var testCode = @"public class TypeName
 {
     public void Bar()
     {
@@ -45,13 +43,13 @@ public class Foo
     }
 }
 ";
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMethodWithOneLineThreeSlashComment()
+        public async Task TestMethodWithOneLineThreeSlashCommentAsync()
         {
-            var testCode = @"public class Foo
+            var testCode = @"public class TypeName
 {
     public void Bar()
     {
@@ -59,18 +57,26 @@ public class Foo
     }
 }
 ";
-            var expected = new[]
-            {
-                this.CSharpDiagnostic().WithLocation(5, 9)
-            };
+            var fixedCode = @"public class TypeName
+{
+    public void Bar()
+    {
+        // This is a comment
+    }
+}
+";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(5, 9);
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMethodWithMultiLineThreeSlashComment()
+        public async Task TestMethodWithMultiLineThreeSlashCommentAsync()
         {
-            var testCode = @"public class Foo
+            var testCode = @"public class TypeName
 {
     public void Bar()
     {
@@ -79,18 +85,31 @@ public class Foo
     }
 }
 ";
-            var expected = new[]
+            var fixedCode = @"public class TypeName
+{
+    public void Bar()
+    {
+        // This is
+        // a comment
+    }
+}
+";
+
+            DiagnosticResult[] expected =
             {
-                this.CSharpDiagnostic().WithLocation(5, 9)
+                this.CSharpDiagnostic().WithLocation(5, 9),
+                this.CSharpDiagnostic().WithLocation(6, 9),
             };
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMethodWithCodeComments()
+        public async Task TestMethodWithCodeCommentsAsync()
         {
-            var testCode = @"public class Foo
+            var testCode = @"public class TypeName
 {
     public void Bar()
     {
@@ -98,13 +117,13 @@ public class Foo
     }
 }
 ";
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMethodWithSingeLineDocumentation()
+        public async Task TestMethodWithSingeLineDocumentationAsync()
         {
-            var testCode = @"public class Foo
+            var testCode = @"public class TypeName
 {
     /// <summary>Summary text</summary>
     public void Bar()
@@ -112,12 +131,19 @@ public class Foo
     }
 }
 ";
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        /// <inheritdoc/>
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1626SingleLineCommentsMustNotUseDocumentationStyleSlashes();
+            yield return new SA1626SingleLineCommentsMustNotUseDocumentationStyleSlashes();
+        }
+
+        /// <inheritdoc/>
+        protected override CodeFixProvider GetCSharpCodeFixProvider()
+        {
+            return new SA1626CodeFixProvider();
         }
     }
 }

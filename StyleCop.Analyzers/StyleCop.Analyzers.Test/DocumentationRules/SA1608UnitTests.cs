@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.DocumentationRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Analyzers.DocumentationRules;
@@ -8,22 +12,15 @@
     using Xunit;
 
     /// <summary>
-    /// This class contains unit tests for <see cref="SA1608ElementDocumentationMustNotHaveDefaultSummary"/>-
+    /// This class contains unit tests for <see cref="SA1608ElementDocumentationMustNotHaveDefaultSummary"/>.
     /// </summary>
-    public class SA1608UnitTests : CodeFixVerifier
+    public class SA1608UnitTests : DiagnosticVerifier
     {
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
         [Theory]
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeNoDocumentation(string typeName)
+        public async Task TestTypeNoDocumentationAsync(string typeName)
         {
             var testCode = @"
 {0} TypeName
@@ -36,7 +33,7 @@
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithSummaryDocumentation(string typeName)
+        public async Task TestTypeWithSummaryDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <summary>
@@ -52,7 +49,7 @@
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithContentDocumentation(string typeName)
+        public async Task TestTypeWithContentDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <content>
@@ -68,7 +65,7 @@
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithInheritedDocumentation(string typeName)
+        public async Task TestTypeWithInheritedDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <inheritdoc/>
@@ -82,7 +79,7 @@
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithoutSummaryDocumentation(string typeName)
+        public async Task TestTypeWithoutSummaryDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <summary>
@@ -99,7 +96,7 @@ TypeName
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestTypeWithoutContentDocumentation(string typeName)
+        public async Task TestTypeWithoutContentDocumentationAsync(string typeName)
         {
             var testCode = @"
 /// <content>
@@ -113,7 +110,7 @@ TypeName
         }
 
         [Fact]
-        public async Task TestClassWithDefaultDocumentation()
+        public async Task TestClassWithDefaultDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -129,7 +126,7 @@ public class ClassName
         }
 
         [Fact]
-        public async Task TestClassWithDefaultDocumentationMultipleWhitespaces()
+        public async Task TestClassWithDefaultDocumentationMultipleWhitespacesAsync()
         {
             var testCode = @"
 /// <summary>
@@ -145,9 +142,9 @@ public class ClassName
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1608ElementDocumentationMustNotHaveDefaultSummary();
+            yield return new SA1608ElementDocumentationMustNotHaveDefaultSummary();
         }
     }
 }

@@ -1,6 +1,9 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
-    using System.Linq;
+    using System;
     using Helpers;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -10,7 +13,7 @@
     /// <summary>
     /// A base class for diagnostics <see cref="SA1642ConstructorSummaryDocumentationMustBeginWithStandardText"/> and <see cref="SA1643DestructorSummaryDocumentationMustBeginWithStandardText"/> to share common code.
     /// </summary>
-    public abstract class StandardTextDiagnosticBase : DiagnosticAnalyzer
+    internal abstract class StandardTextDiagnosticBase : DiagnosticAnalyzer
     {
         /// <summary>
         /// Describes the result of matching a summary element to a specific desired wording.
@@ -29,18 +32,15 @@
             None,
 
             /// <summary>
+            /// A standard text was found but the see element was incorrect.
+            /// </summary>
+            InvalidSeeTag,
+
+            /// <summary>
             /// A match to the expected text was found.
             /// </summary>
             FoundMatch,
         }
-
-        /// <summary>
-        /// Gets the diagnostic descriptor that should be used when reporting a diagnostic.
-        /// </summary>
-        /// <value>
-        /// The diagnostic descriptor that should be used when reporting a diagnostic.
-        /// </value>
-        protected abstract DiagnosticDescriptor DiagnosticDescriptor { get; }
 
         /// <summary>
         /// Analyzes a <see cref="BaseMethodDeclarationSyntax"/> node. If it has a summary it is checked if the text starts with &quot;[firstTextPart]&lt;see cref=&quot;[className]&quot;/&gt;[secondTextPart]&quot;.
@@ -48,9 +48,9 @@
         /// <param name="context">The <see cref="SyntaxNodeAnalysisContext"/> of this analysis.</param>
         /// <param name="firstTextPart">The first part of the standard text.</param>
         /// <param name="secondTextPart">The second part of the standard text.</param>
-        /// <param name="reportDiagnostic">Whether or not a diagnostic should be reported.</param>
+        /// <param name="diagnosticDescriptor">The diagnostic to report for violations, or <see langword="null"/> to not report violations.</param>
         /// <returns>A <see cref="MatchResult"/> describing the result of the analysis.</returns>
-        protected MatchResult HandleDeclaration(SyntaxNodeAnalysisContext context, string firstTextPart, string secondTextPart, bool reportDiagnostic)
+        protected static MatchResult HandleDeclaration(SyntaxNodeAnalysisContext context, string firstTextPart, string secondTextPart, DiagnosticDescriptor diagnosticDescriptor)
         {
             var declarationSyntax = context.Node as BaseMethodDeclarationSyntax;
             if (declarationSyntax == null)
@@ -58,13 +58,13 @@
                 return MatchResult.Unknown;
             }
 
-            var documentationStructure = XmlCommentHelper.GetDocumentationStructure(declarationSyntax);
+            var documentationStructure = declarationSyntax.GetDocumentationCommentTriviaSyntax();
             if (documentationStructure == null)
             {
                 return MatchResult.Unknown;
             }
 
-            var summaryElement = XmlCommentHelper.GetTopLevelElement(documentationStructure, XmlCommentHelper.SummaryXmlTag) as XmlElementSyntax;
+            var summaryElement = documentationStructure.Content.GetFirstXmlElement(XmlCommentHelper.SummaryXmlTag) as XmlElementSyntax;
             if (summaryElement == null)
             {
                 return MatchResult.Unknown;
@@ -80,29 +80,36 @@
 
                 if (firstTextPartSyntax != null && classReferencePart != null && secondTextParSyntaxt != null)
                 {
-                    // Check text parts
-                    var firstText = XmlCommentHelper.GetText(firstTextPartSyntax);
-                    var secondText = XmlCommentHelper.GetText(secondTextParSyntaxt);
-
-                    if (TextPartsMatch(firstTextPart, secondTextPart, firstTextPartSyntax, secondTextParSyntaxt)
-                        && this.SeeTagIsCorrect(context, classReferencePart, declarationSyntax))
+                    if (TextPartsMatch(firstTextPart, secondTextPart, firstTextPartSyntax, secondTextParSyntaxt))
                     {
-                        // We found a correct standard text
-                        return MatchResult.FoundMatch;
+                        if (SeeTagIsCorrect(context, classReferencePart, declarationSyntax))
+                        {
+                            // We found a correct standard text
+                            return MatchResult.FoundMatch;
+                        }
+                        else
+                        {
+                            if (diagnosticDescriptor != null)
+                            {
+                                context.ReportDiagnostic(Diagnostic.Create(diagnosticDescriptor, classReferencePart.GetLocation()));
+                            }
+
+                            return MatchResult.None;
+                        }
                     }
                 }
             }
 
-            if (reportDiagnostic)
+            if (diagnosticDescriptor != null)
             {
-                context.ReportDiagnostic(Diagnostic.Create(this.DiagnosticDescriptor, summaryElement.GetLocation()));
+                context.ReportDiagnostic(Diagnostic.Create(diagnosticDescriptor, summaryElement.GetLocation()));
             }
 
             // TODO: be more specific about the type of error when possible
             return MatchResult.None;
         }
 
-        private bool SeeTagIsCorrect(SyntaxNodeAnalysisContext context, XmlEmptyElementSyntax classReferencePart, BaseMethodDeclarationSyntax constructorDeclarationSyntax)
+        private static bool SeeTagIsCorrect(SyntaxNodeAnalysisContext context, XmlEmptyElementSyntax classReferencePart, BaseMethodDeclarationSyntax constructorDeclarationSyntax)
         {
             XmlCrefAttributeSyntax crefAttribute = XmlCommentHelper.GetFirstAttributeOrDefault<XmlCrefAttributeSyntax>(classReferencePart);
             CrefSyntax crefSyntax = crefAttribute?.Cref;
@@ -122,11 +129,6 @@
             return actualSymbol.OriginalDefinition == expectedSymbol;
         }
 
-        private string GetName(TypeSyntax name)
-        {
-            return (name as SimpleNameSyntax).Identifier.ToString() ?? name.ToString();
-        }
-
         private static bool TextPartsMatch(string firstText, string secondText, XmlTextSyntax firstTextPart, XmlTextSyntax secondTextPart)
         {
             string firstTextPartText = XmlCommentHelper.GetText(firstTextPart, normalizeWhitespace: true);
@@ -136,39 +138,12 @@
             }
 
             string secondTextPartText = XmlCommentHelper.GetText(secondTextPart, normalizeWhitespace: true);
-            if (!secondTextPartText.StartsWith(secondText))
+            if (!secondTextPartText.StartsWith(secondText, StringComparison.Ordinal))
             {
                 return false;
             }
 
             return true;
-        }
-
-        private static bool TypeParameterNamesMatch(BaseTypeDeclarationSyntax baseTypeDeclarationSyntax, TypeSyntax name)
-        {
-            TypeParameterListSyntax typeParameterList;
-            if (baseTypeDeclarationSyntax.IsKind(SyntaxKind.ClassDeclaration))
-            {
-                typeParameterList = (baseTypeDeclarationSyntax as ClassDeclarationSyntax)?.TypeParameterList;
-            }
-            else
-            {
-                typeParameterList = (baseTypeDeclarationSyntax as StructDeclarationSyntax)?.TypeParameterList;
-            }
-
-            var genericName = name as GenericNameSyntax;
-            if (genericName != null)
-            {
-                var genericNameArgumentNames = genericName.TypeArgumentList.Arguments.Cast<SimpleNameSyntax>().Select(p => p.Identifier.ToString());
-                var classParameterNames = typeParameterList?.Parameters.Select(p => p.Identifier.ToString()) ?? Enumerable.Empty<string>();
-                // Make sure the names match up
-                return genericNameArgumentNames.SequenceEqual(classParameterNames);
-            }
-            else
-            {
-                return typeParameterList == null
-                    || !typeParameterList.Parameters.Any();
-            }
         }
     }
 }

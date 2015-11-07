@@ -1,29 +1,38 @@
-﻿namespace StyleCop.Analyzers.Test.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.DocumentationRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.Diagnostics;
     using StyleCop.Analyzers.DocumentationRules;
     using TestHelper;
     using Xunit;
 
     /// <summary>
-    /// This class contains unit tests for <see cref="SA1601PartialElementsMustBeDocumented"/>-
+    /// This class contains unit tests for <see cref="SA1601PartialElementsMustBeDocumented"/>.
     /// </summary>
-    public class SA1601UnitTests : CodeFixVerifier
+    public class SA1601UnitTests : DiagnosticVerifier
     {
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
+        private const string SettingsFileName = "stylecop.json";
+        private const string TestSettings = @"
+{
+  ""settings"": {
+    ""documentationRules"": {
+      ""documentPrivateElements"": true
+    }
+  }
+}
+";
 
         [Theory]
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestPartialTypeWithDocumentation(string typeKeyword)
+        public async Task TestPartialTypeWithDocumentationAsync(string typeKeyword)
         {
             var testCode = @"
 /// <summary>
@@ -39,7 +48,7 @@ public partial {0} TypeName
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestPartialTypeWithoutDocumentation(string typeKeyword)
+        public async Task TestPartialTypeWithoutDocumentationAsync(string typeKeyword)
         {
             var testCode = @"
 public partial {0}
@@ -56,7 +65,7 @@ TypeName
         [InlineData("class")]
         [InlineData("struct")]
         [InlineData("interface")]
-        public async Task TestPartialClassWithEmptyDocumentation(string typeKeyword)
+        public async Task TestPartialClassWithEmptyDocumentationAsync(string typeKeyword)
         {
             var testCode = @"
 /// <summary>
@@ -73,7 +82,7 @@ TypeName
         }
 
         [Fact]
-        public async Task TestPartialMethodWithDocumentation()
+        public async Task TestPartialMethodWithDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -90,7 +99,7 @@ public partial class TypeName
         }
 
         [Fact]
-        public async Task TestPartialMethodWithoutDocumentation()
+        public async Task TestPartialMethodWithoutDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -107,7 +116,7 @@ public partial class TypeName
         }
 
         [Fact]
-        public async Task TestPartialMethodWithEmptyDocumentation()
+        public async Task TestPartialMethodWithEmptyDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -126,9 +135,16 @@ public partial class TypeName
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        /// <inheritdoc/>
+        protected override string GetSettings()
         {
-            return new SA1601PartialElementsMustBeDocumented();
+            return TestSettings;
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1601PartialElementsMustBeDocumented();
         }
     }
 }

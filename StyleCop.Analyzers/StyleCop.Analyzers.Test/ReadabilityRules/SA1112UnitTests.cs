@@ -1,23 +1,22 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.Diagnostics;
-using StyleCop.Analyzers.ReadabilityRules;
-using TestHelper;
-using Xunit;
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace StyleCop.Analyzers.Test.ReadabilityRules
 {
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Analyzers.SpacingRules;
+    using Microsoft.CodeAnalysis.CodeFixes;
+    using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.ReadabilityRules;
+    using TestHelper;
+    using Xunit;
+
     public class SA1112UnitTests : CodeFixVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestMethodWithNoParametersClosingParanthesisOnTheNextLine()
+        public async Task TestMethodWithNoParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -28,14 +27,24 @@ class Foo
 
     }
 }";
+            var fixedCode = @"
+class Foo
+{
+    public void Bar()
+    {
+
+    }
+}";
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(5, 1);
 
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMethodWithNoParametersClosingParanthesisOnTheSameLine()
+        public async Task TestMethodWithNoParametersClosingParanthesisOnTheSameLineAsync()
         {
             var testCode = @"
 class Foo
@@ -50,7 +59,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMethodWithParametersClosingParanthesisOnTheNextLine()
+        public async Task TestMethodWithParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -66,7 +75,7 @@ string s)
         }
 
         [Fact]
-        public async Task TestConstructorWithNoParametersClosingParanthesisOnTheNextLine()
+        public async Task TestConstructorWithNoParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -77,14 +86,24 @@ class Foo
 
     }
 }";
+            var fixedCode = @"
+class Foo
+{
+    public Foo()
+    {
+
+    }
+}";
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(5, 1);
 
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstructorWithNoParametersClosingParanthesisOnTheSameLine()
+        public async Task TestConstructorWithNoParametersClosingParanthesisOnTheSameLineAsync()
         {
             var testCode = @"
 class Foo
@@ -99,7 +118,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestConstructorWithParametersClosingParanthesisOnTheNextLine()
+        public async Task TestConstructorWithParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -115,7 +134,7 @@ string s)
         }
 
         [Fact]
-        public async Task TestMethodCallNoParametersClosingParanthesisOnTheNextLine()
+        public async Task TestMethodCallNoParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -126,14 +145,24 @@ class Foo
 );
     }
 }";
+            var fixedCode = @"
+class Foo
+{
+    public void Bar()
+    {
+        var s = ToString();
+    }
+}";
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 1);
 
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMethodCallWithParametersClosingParanthesisOnTheNextLine()
+        public async Task TestMethodCallWithParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -149,7 +178,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMethodCallNoParametersClosingParanthesisOnTheSameLine()
+        public async Task TestMethodCallNoParametersClosingParanthesisOnTheSameLineAsync()
         {
             var testCode = @"
 class Foo
@@ -164,7 +193,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestConstructorCallNoParametersClosingParanthesisOnTheNextLine()
+        public async Task TestConstructorCallNoParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -175,14 +204,24 @@ class Foo
 );
     }
 }";
+            var fixedCode = @"
+class Foo
+{
+    public void Bar()
+    {
+        var o = new object();
+    }
+}";
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 1);
 
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestConstructorCallWithParametersClosingParanthesisOnTheNextLine()
+        public async Task TestConstructorCallWithParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 public class CtorWithParams
@@ -204,7 +243,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestConstructorCallNoParametersClosingParanthesisOnTheSameLine()
+        public async Task TestConstructorCallNoParametersClosingParanthesisOnTheSameLineAsync()
         {
             var testCode = @"
 class Foo
@@ -219,7 +258,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestIndexerWithParametersClosingParanthesisOnTheNextLine()
+        public async Task TestIndexerWithParametersClosingParanthesisOnTheNextLineAsync()
         {
             var testCode = @"
 class Foo
@@ -238,7 +277,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestCreationOfObjectNoOpeningClosingParenthesis()
+        public async Task TestCreationOfObjectNoOpeningClosingParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -252,9 +291,67 @@ public class Foo
             await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        [Fact]
+        public async Task TestDirectiveTriviaAsync()
         {
-            return new SA1112ClosingParenthesisMustBeOnLineOfOpeningParenthesis();
+            var testCode = @"
+public class TestClass
+{
+    public void TestMethod1(
+#if true
+        )
+#endif
+    {
+    }
+
+    public void TestMethod2()
+    {
+        TestMethod1(
+#if true
+#endif
+            );
+    }
+}
+";
+
+            var fixedCode = @"
+public class TestClass
+{
+    public void TestMethod1(
+#if true
+        )
+#endif
+    {
+    }
+
+    public void TestMethod2()
+    {
+        TestMethod1(
+#if true
+#endif
+            );
+    }
+}
+";
+
+            DiagnosticResult[] expected =
+            {
+                this.CSharpDiagnostic().WithLocation(6, 9),
+                this.CSharpDiagnostic().WithLocation(16, 13)
+            };
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode).ConfigureAwait(false);
+        }
+
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1112ClosingParenthesisMustBeOnLineOfOpeningParenthesis();
+        }
+
+        protected override CodeFixProvider GetCSharpCodeFixProvider()
+        {
+            return new TokenSpacingCodeFixProvider();
         }
     }
 }

@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.NamingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.NamingRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.CodeFixes;
@@ -11,14 +15,7 @@
     public class SA1311UnitTests : CodeFixVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestStaticReadonlyFieldStartingWithLoweCase()
+        public async Task TestStaticReadonlyFieldStartingWithLoweCaseAsync()
         {
             var testCode = @"public class Foo
 {
@@ -38,7 +35,7 @@
         }
 
         [Fact]
-        public async Task TestStaticReadonlyFieldStartingWithLoweCaseFieldIsJustOneLetter()
+        public async Task TestStaticReadonlyFieldStartingWithLoweCaseFieldIsJustOneLetterAsync()
         {
             var testCode = @"public class Foo
 {
@@ -58,7 +55,7 @@
         }
 
         [Fact]
-        public async Task TestStaticReadonlyFieldAssignmentInConstructor()
+        public async Task TestStaticReadonlyFieldAssignmentInConstructorAsync()
         {
             var testCode = @"public class Foo
 {
@@ -88,7 +85,7 @@
         }
 
         [Fact]
-        public async Task TestStaticReadonlyFieldStartingWithUpperCase()
+        public async Task TestStaticReadonlyFieldStartingWithUpperCaseAsync()
         {
             var testCode = @"public class Foo
 {
@@ -99,7 +96,7 @@
         }
 
         [Fact]
-        public async Task TestReadonlyFieldStartingWithLoweCase()
+        public async Task TestReadonlyFieldStartingWithLoweCaseAsync()
         {
             var testCode = @"public class Foo
 {
@@ -110,7 +107,7 @@
         }
 
         [Fact]
-        public async Task TestStaticFieldStartingWithLoweCase()
+        public async Task TestStaticFieldStartingWithLoweCaseAsync()
         {
             var testCode = @"public class Foo
 {
@@ -121,7 +118,7 @@
         }
 
         [Fact]
-        public async Task TestClassNameConflict()
+        public async Task TestClassNameConflictAsync()
         {
             var testCode = @"public class Bar
 {
@@ -151,7 +148,7 @@
         }
 
         [Fact]
-        public async Task TestMemberNameConflict()
+        public async Task TestMemberNameConflictAsync()
         {
             var testCode = @"public class Foo
 {
@@ -184,14 +181,14 @@
             await this.VerifyCSharpFixAsync(testCode, fixedCode).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1311StaticReadonlyFieldsMustBeginWithUpperCaseLetter();
+            yield return new SA1311StaticReadonlyFieldsMustBeginWithUpperCaseLetter();
         }
 
         protected override CodeFixProvider GetCSharpCodeFixProvider()
         {
-            return new SA1304SA1311CodeFixProvider();
+            return new RenameToUpperCaseCodeFixProvider();
         }
     }
 }

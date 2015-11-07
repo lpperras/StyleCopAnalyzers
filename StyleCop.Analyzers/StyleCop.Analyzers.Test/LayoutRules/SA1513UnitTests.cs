@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.LayoutRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.CodeFixes;
@@ -14,25 +18,15 @@
     public class SA1513UnitTests : CodeFixVerifier
     {
         /// <summary>
-        /// Verifies that the analyzer will properly handle an empty source.
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        /// <summary>
         /// Verifies that all valid usages of a closing curly brace without a following blank line will report no diagnostic.
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestValid()
+        public async Task TestValidAsync()
         {
             var testCode = @"using System;
 using System.Linq;
+using System.Collections.Generic;
 
 public class Foo
 {
@@ -338,10 +332,82 @@ public class Foo
         {
         }
     }
+
+    // Valid #28 - Test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1020
+    private static IEnumerable<object> Method()
+    {
+        yield return new
+        {
+            prop = ""A""
+        };
+    }
+
+    // This is a regression test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/784
+    public void MultiLineLinqQuery()
+    {
+        var someQuery = (from f in Enumerable.Empty<int>()
+                         where f != 0
+                         select new { Fish = ""Face"" }).ToList();
+
+        var someOtherQuery = (from f in Enumerable.Empty<int>()
+                              where f != 0
+                              select new
+                              {
+                                  Fish = ""AreFriends"",
+                                  Not = ""Food""
+                              }).ToList();
+    }
+
+    // This is a regression test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1049
+    public object[] ExpressionBodiedProperty =>
+        new[]
+        {
+            new object()
+        };
+
+    // This is a regression test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1049
+    public object[] ExpressionBodiedMethod() =>
+        new[]
+        {
+            new object()
+        };
+
+    // This is a regression test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1049
+    public object[] GetterOnlyAutoProperty1 { get; } =
+        new[]
+        {
+            new object()
+        };
+
+    // This is a regression test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1049
+    public object[] GetterOnlyAutoProperty2 { get; } =
+        {
+        };
+
+    // This is a regression test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1173
+    bool contained =
+        new[]
+        {
+            1,
+            2,
+            3
+        }
+        .Contains(3);
+
+    // This is a regression test for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1583
+    public void TestTernaryConstruction()
+    {
+        var target = contained
+            ? new Dictionary<string, string>
+                {
+                    { ""target"", ""_parent"" }
+                }
+            : new Dictionary<string, string>();
+    }
 }
 ";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -349,10 +415,10 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestInvalid()
+        public async Task TestInvalidAsync()
         {
             var testCode = @"using System;
-
+using System.Collections.Generic;
 public class Foo
 {
     private int x;
@@ -427,27 +493,51 @@ public class Foo
             break;
         }
     }
+
+    public void Example()
+    {
+        new List<Action>
+        {
+            () =>
+            {
+                if (true)
+                {
+                    return;
+                }
+                return;
+            }
+        };
+    }
 }
 ";
             var expected = new[]
             {
                 // Invalid #1
                 this.CSharpDiagnostic().WithLocation(17, 10),
+
                 // Invalid #2
                 this.CSharpDiagnostic().WithLocation(25, 6),
+
                 // Invalid #3
                 this.CSharpDiagnostic().WithLocation(35, 14),
+
                 // Invalid #4
                 this.CSharpDiagnostic().WithLocation(45, 10),
+
                 // Invalid #5
                 this.CSharpDiagnostic().WithLocation(52, 10),
+
                 // Invalid #6
                 this.CSharpDiagnostic().WithLocation(65, 14),
+
                 // Invalid #7
-                this.CSharpDiagnostic().WithLocation(73, 14)
+                this.CSharpDiagnostic().WithLocation(73, 14),
+
+                // Invalid #8
+                this.CSharpDiagnostic().WithLocation(87, 18)
             };
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -455,9 +545,10 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFix()
+        public async Task TestCodeFixAsync()
         {
             var testCode = @"using System;
+using System.Collections.Generic;
 
 public class Foo
 {
@@ -513,11 +604,27 @@ public class Foo
         {
             this.x = 0;
         }
+    }
+
+    public void Example()
+    {
+        new List<Action>
+        {
+            () =>
+            {
+                if (true)
+                {
+                    return;
+                }
+                return;
+            }
+        };
     }
 }
 ";
 
             var fixedTestCode = @"using System;
+using System.Collections.Generic;
 
 public class Foo
 {
@@ -579,16 +686,63 @@ public class Foo
             this.x = 0;
         }
     }
+
+    public void Example()
+    {
+        new List<Action>
+        {
+            () =>
+            {
+                if (true)
+                {
+                    return;
+                }
+
+                return;
+            }
+        };
+    }
 }
 ";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedTestCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCode).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Verifies the analyzer will properly handle an object initializer without assignment.
+        /// This is a regression test for <see href="https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1301">DotNetAnalyzers/StyleCopAnalyzers#1301</see>.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Fact]
+        public async Task TestObjectInitializerWithoutAssignmentAsync()
+        {
+            var testCode = @"using System.Collections.Generic;
+public class TestClass
+{
+    public int X { get; set; }
+
+    public void TestMethod()
+    {
+        new List<int>
+        {
+            1
+        };
+
+        new TestClass
+        {
+            X = 1
+        };
+    }
+}
+";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1513ClosingCurlyBracketMustBeFollowedByBlankLine();
+            yield return new SA1513ClosingCurlyBracketMustBeFollowedByBlankLine();
         }
 
         /// <inheritdoc/>

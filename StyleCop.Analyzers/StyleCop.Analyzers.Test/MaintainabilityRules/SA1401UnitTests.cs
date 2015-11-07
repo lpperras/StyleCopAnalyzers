@@ -1,23 +1,23 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.Diagnostics;
-using StyleCop.Analyzers.MaintainabilityRules;
-using TestHelper;
-using Xunit;
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace StyleCop.Analyzers.Test.MaintainabilityRules
 {
-    public class SA1401UnitTests : CodeFixVerifier
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.MaintainabilityRules;
+    using TestHelper;
+    using Xunit;
+
+    /// <summary>
+    /// This class contains unit tests for <see cref="SA1401FieldsMustBePrivate"/>.
+    /// </summary>
+    public class SA1401UnitTests : DiagnosticVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestClassWithPublicField()
+        public async Task TestClassWithPublicFieldAsync()
         {
             var testCode = @"public class Foo
 {
@@ -30,7 +30,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestClassWithInternalField()
+        public async Task TestClassWithInternalFieldAsync()
         {
             var testCode = @"public class Foo
 {
@@ -43,7 +43,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestClassWithFieldNoAccessModifier()
+        public async Task TestClassWithFieldNoAccessModifierAsync()
         {
             var testCode = @"public class Foo
 {
@@ -54,7 +54,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestStructWithPublicField()
+        public async Task TestStructWithPublicFieldAsync()
         {
             var testCode = @"public struct Foo
 {
@@ -65,7 +65,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestClassWithConstField()
+        public async Task TestClassWithConstFieldAsync()
         {
             var testCode = @"public class Foo
 {
@@ -74,9 +74,24 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
             await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        [Theory]
+        [InlineData("public")]
+        [InlineData("protected")]
+        [InlineData("protected internal")]
+        public async Task TestClassWithStaticReadonlyFieldAsync(string accessModifier)
         {
-            return new SA1401FieldsMustBePrivate();
+            var testCode = $@"public class TestClass
+{{
+    {accessModifier} static readonly string TestField = ""qwe"";
+}}
+";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1401FieldsMustBePrivate();
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.Test.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.LayoutRules
 {
     using System.Collections.Generic;
     using System.Threading;
@@ -28,18 +31,10 @@
                 yield return new[] { "while (i == 0)" };
                 yield return new[] { "for (var j = 0; j < i; j++)" };
                 yield return new[] { "foreach (var j in new[] { 1, 2, 3 })" };
+                yield return new[] { "lock (this)" };
+                yield return new[] { "using (this)" };
+                yield return new[] { "fixed (byte* ptr = new byte[10])" };
             }
-        }
-
-        /// <summary>
-        /// Verifies that the analyzer will properly handle an empty source.
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
         }
 
         /// <summary>
@@ -49,11 +44,48 @@
         /// either a statement block or a single statement.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Theory]
-        [MemberData("TestStatements")]
-        public async Task TestStatementWithoutCurlyBrackets(string statementText)
+        [MemberData(nameof(TestStatements))]
+        public async Task TestStatementWithoutCurlyBracketsAsync(string statementText)
         {
             var expected = this.CSharpDiagnostic().WithLocation(7, 13);
-            await this.VerifyCSharpDiagnosticAsync(this.GenerateTestStatement(statementText), expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(this.GenerateTestStatement(statementText), expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Verifies that a <c>do</c> statement followed by a block without curly braces will produce a warning, and the
+        /// code fix for this warning results in valid code.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Fact]
+        public async Task TestDoStatementAsync()
+        {
+            var testCode = @"using System.Diagnostics;
+public class Foo
+{
+    public void Bar(int i)
+    {
+        do
+            Debug.Assert(true);
+        while (false);
+    }
+}";
+            var fixedCode = @"using System.Diagnostics;
+public class Foo
+{
+    public void Bar(int i)
+    {
+        do
+        {
+            Debug.Assert(true);
+        }
+        while (false);
+    }
+}";
+
+            var expected = this.CSharpDiagnostic().WithLocation(7, 13);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -63,10 +95,10 @@
         /// either a statement block or a single statement.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Theory]
-        [MemberData("TestStatements")]
-        public async Task TestStatementWithCurlyBrackets(string statementText)
+        [MemberData(nameof(TestStatements))]
+        public async Task TestStatementWithCurlyBracketsAsync(string statementText)
         {
-            await this.VerifyCSharpDiagnosticAsync(this.GenerateFixedTestStatement(statementText), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(this.GenerateFixedTestStatement(statementText), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -74,7 +106,7 @@
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestIfElseStatementWithoutCurlyBrackets()
+        public async Task TestIfElseStatementWithoutCurlyBracketsAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -94,7 +126,7 @@ public class Foo
                 this.CSharpDiagnostic().WithLocation(9, 13)
             };
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -102,7 +134,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestIfElseStatementWithCurlyBrackets()
+        public async Task TestIfElseStatementWithCurlyBracketsAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -120,7 +152,7 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -128,7 +160,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestIfElseIfElseStatementWithCurlyBrackets()
+        public async Task TestIfElseIfElseStatementWithCurlyBracketsAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -150,7 +182,7 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -158,7 +190,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestMultipleIfStatementsWithoutCurlyBrackets()
+        public async Task TestMultipleIfStatementsWithoutCurlyBracketsAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -175,19 +207,7 @@ public class Foo
                 this.CSharpDiagnostic().WithLocation(6, 33)
             };
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// Verifies that the codefix provider will work properly for a statement.
-        /// </summary>
-        /// <param name="statementText">The source code for the first part of a compound statement whose child can be
-        /// either a statement block or a single statement.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
-        [Theory, MemberData("TestStatements")]
-        private async Task TestCodeFixForStatement(string statementText)
-        {
-            await this.VerifyCSharpFixAsync(this.GenerateTestStatement(statementText), this.GenerateFixedTestStatement(statementText));
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -195,7 +215,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixProviderForIfElseStatement()
+        public async Task TestCodeFixProviderForIfElseStatementAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -203,14 +223,15 @@ public class Foo
     public void Bar(int i)
     {
         if (i == 0)
-        {
             Debug.Assert(true);
-        }
         else
             Debug.Assert(false);
     }
 }";
 
+            // While it looks like only one instance is fixed, what actually happened is fixing the first warning caused
+            // the second warning to change from SA1503 to SA1520. Since the testing framework is only testing SA1503,
+            // from its perspective all warnings have been corrected so it stops iterating.
             var fixedTestCode = @"using System.Diagnostics;
 public class Foo
 {
@@ -221,22 +242,39 @@ public class Foo
             Debug.Assert(true);
         }
         else
+            Debug.Assert(false);
+    }
+}";
+
+            // The batch fixer does correct all problems in one pass.
+            var batchFixedTestCode = @"using System.Diagnostics;
+public class Foo
+{
+    public void Bar(int i)
+    {
+        if (i == 0)
+        {
+            Debug.Assert(true);
+        }
+        else
         {
             Debug.Assert(false);
         }
     }
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedTestCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCode, batchNewSource: batchFixedTestCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Verifies that the codefix provider will properly handle alternate indentations.
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
-        [Fact(Skip = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/660")]
-        public async Task TestCodeFixProviderWithAlternateIndentation()
+        [Fact]
+        public async Task TestCodeFixProviderWithAlternateIndentationAsync()
         {
+            this.IndentationSize = 1;
+
             var testCode = @"using System.Diagnostics;
 public class Foo
 {
@@ -259,7 +297,7 @@ public class Foo
  }
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedTestCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCode).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -267,7 +305,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixProviderWithNonWhitespaceTrivia()
+        public async Task TestCodeFixProviderWithNonWhitespaceTriviaAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -293,7 +331,7 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedTestCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCode).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -301,7 +339,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixProviderWithMultipleNestings()
+        public async Task TestCodeFixProviderWithMultipleNestingsAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -327,7 +365,7 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedTestCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCode).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -335,7 +373,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixWithPreprocessorDirectives()
+        public async Task TestCodeFixWithPreprocessorDirectivesAsync()
         {
             var testCode = @"using System.Diagnostics;
 public class Foo
@@ -350,13 +388,13 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, testCode);
+            await this.VerifyCSharpFixAsync(testCode, testCode).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1503CurlyBracketsMustNotBeOmitted();
+            yield return new SA1503CurlyBracketsMustNotBeOmitted();
         }
 
         /// <inheritdoc/>
@@ -365,16 +403,30 @@ public class Foo
             return new SA1503CodeFixProvider();
         }
 
+        /// <summary>
+        /// Verifies that the codefix provider will work properly for a statement.
+        /// </summary>
+        /// <param name="statementText">The source code for the first part of a compound statement whose child can be
+        /// either a statement block or a single statement.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Theory, MemberData(nameof(TestStatements))]
+        private async Task TestCodeFixForStatementAsync(string statementText)
+        {
+            await this.VerifyCSharpFixAsync(this.GenerateTestStatement(statementText), this.GenerateFixedTestStatement(statementText)).ConfigureAwait(false);
+        }
+
         private string GenerateTestStatement(string statementText)
         {
             var testCodeFormat = @"using System.Diagnostics;
-public class Foo
+public class Foo : System.IDisposable
 {
-    public void Bar(int i)
+    public unsafe void Bar(int i)
     {
         #STATEMENT#
             Debug.Assert(true);
     }
+
+    public void Dispose() {}
 }";
             return testCodeFormat.Replace("#STATEMENT#", statementText);
         }
@@ -382,15 +434,17 @@ public class Foo
         private string GenerateFixedTestStatement(string statementText)
         {
             var fixedTestCodeFormat = @"using System.Diagnostics;
-public class Foo
+public class Foo : System.IDisposable
 {
-    public void Bar(int i)
+    public unsafe void Bar(int i)
     {
         #STATEMENT#
         {
             Debug.Assert(true);
         }
     }
+
+    public void Dispose() {}
 }";
             return fixedTestCodeFormat.Replace("#STATEMENT#", statementText);
         }

@@ -1,7 +1,12 @@
-﻿namespace StyleCop.Analyzers.OrderingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.OrderingRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
+    using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.Diagnostics;
 
     /// <summary>
@@ -17,37 +22,74 @@
     /// these access levels are indeed the same.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1207ProtectedMustComeBeforeInternal : DiagnosticAnalyzer
+    internal class SA1207ProtectedMustComeBeforeInternal : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1207ProtectedMustComeBeforeInternal"/> analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1207";
         private const string Title = "Protected must come before internal";
-        private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.OrderingRules";
+        private const string MessageFormat = "The keyword 'protected' must come before 'internal'.";
         private const string Description = "The keyword 'protected' is positioned after the keyword 'internal' within the declaration of a protected internal C# element.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1207.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1207.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.OrderingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly ImmutableArray<SyntaxKind> HandledSyntaxKinds =
+            ImmutableArray.Create(
+                SyntaxKind.ClassDeclaration,
+                SyntaxKind.DelegateDeclaration,
+                SyntaxKind.EventDeclaration,
+                SyntaxKind.EventFieldDeclaration,
+                SyntaxKind.FieldDeclaration,
+                SyntaxKind.IndexerDeclaration,
+                SyntaxKind.InterfaceDeclaration,
+                SyntaxKind.MethodDeclaration,
+                SyntaxKind.PropertyDeclaration,
+                SyntaxKind.StructDeclaration);
+
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> DeclarationAction = HandleDeclaration;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Implement analysis
+            context.RegisterCompilationStartAction(CompilationStartAction);
+        }
+
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(DeclarationAction, HandledSyntaxKinds);
+        }
+
+        private static void HandleDeclaration(SyntaxNodeAnalysisContext context)
+        {
+            var childTokens = context.Node?.ChildTokens();
+            if (childTokens == null)
+            {
+                return;
+            }
+
+            bool internalKeywordFound = false;
+            foreach (var childToken in childTokens)
+            {
+                if (childToken.IsKind(SyntaxKind.InternalKeyword))
+                {
+                    internalKeywordFound = true;
+                    continue;
+                }
+
+                if (internalKeywordFound && childToken.IsKind(SyntaxKind.ProtectedKeyword))
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, childToken.GetLocation()));
+                    break;
+                }
+            }
         }
     }
 }

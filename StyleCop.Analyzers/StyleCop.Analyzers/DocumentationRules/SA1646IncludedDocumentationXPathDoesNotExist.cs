@@ -1,6 +1,10 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
     using System.Collections.Immutable;
+    using System.Diagnostics.CodeAnalysis;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -13,7 +17,7 @@
     /// the header syntax, see the following article:
     /// <see href="http://msdn.microsoft.com/en-us/magazine/cc302121.aspx">XML Comments Let You Build Documentation
     /// Directly From Your Visual Studio .NET Source Files</see>.</para>
-    /// 
+    ///
     /// <para>As an alternative to authoring documentation directly within the code file, it is possible to place
     /// documentation for multiple elements within a separate XML file, and then reference a section of that file within
     /// an element's documentation header. This causes the compiler to import the documentation for that element from
@@ -30,8 +34,9 @@
     /// documentation file.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
+    [NoDiagnostic("This is already handled by the compiler with warning CS1589.")]
     [NoCodeFix("Cannot generate documentation")]
-    public class SA1646IncludedDocumentationXPathDoesNotExist : DiagnosticAnalyzer
+    internal class SA1646IncludedDocumentationXPathDoesNotExist : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1646IncludedDocumentationXPathDoesNotExist"/> analyzer.
@@ -39,29 +44,21 @@
         public const string DiagnosticId = "SA1646";
         private const string Title = "Included documentation XPath does not exist";
         private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "An included XML documentation link contains an invalid path.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1646.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1646.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledByDefault, Description, HelpLink, WellKnownDiagnosticTags.NotConfigurable);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
+        /// <inheritdoc/>
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
             ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
-
-        /// <inheritdoc/>
+        [ExcludeFromCodeCoverage]
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Implement analysis
+            // This diagnostic is not implemented (by design) in StyleCopAnalyzers.
         }
     }
 }

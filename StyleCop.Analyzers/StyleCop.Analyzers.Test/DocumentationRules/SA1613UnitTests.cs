@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.Test.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.DocumentationRules
 {
     using System.Collections.Generic;
     using System.Threading;
@@ -11,7 +14,7 @@
     /// <summary>
     /// This class contains unit tests for <see cref="SA1613ElementParameterDocumentationMustDeclareParameterName"/>.
     /// </summary>
-    public class SA1613UnitTests : CodeFixVerifier
+    public class SA1613UnitTests : DiagnosticVerifier
     {
         public static IEnumerable<object[]> Declarations
         {
@@ -23,14 +26,7 @@
         }
 
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestMemberWithoutDocumentation()
+        public async Task TestMemberWithoutDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -40,12 +36,12 @@ public class ClassName
 {
     public ClassName Method() { return null; }
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Declarations))]
-        public async Task TestMemberWithoutParams(string declaration)
+        public async Task TestMemberWithoutParamsAsync(string declaration)
         {
             var testCode = @"
 /// <summary>
@@ -58,12 +54,12 @@ public class ClassName
     /// </summary>
 $$
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("$$", declaration), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("$$", declaration), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Declarations))]
-        public async Task TestMemberWithValidParams(string declaration)
+        public async Task TestMemberWithValidParamsAsync(string declaration)
         {
             var testCode = @"
 /// <summary>
@@ -78,12 +74,12 @@ public class ClassName
     ///<param name=""bar"">Test</param>
 $$
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("$$", declaration), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("$$", declaration), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Declarations))]
-        public async Task TestMemberWithInvalidParams(string declaration)
+        public async Task TestMemberWithInvalidParamsAsync(string declaration)
         {
             var testCode = @"
 /// <summary>
@@ -109,12 +105,41 @@ $$
                 this.CSharpDiagnostic().WithLocation(13, 15)
             };
 
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("$$", declaration), expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("$$", declaration), expected, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        [Theory]
+        [MemberData(nameof(Declarations))]
+        public async Task TestMemberWithInvalidParamsAndInheritDocAsync(string declaration)
         {
-            return new SA1613ElementParameterDocumentationMustDeclareParameterName();
+            var testCode = @"
+/// <summary>
+/// Foo
+/// </summary>
+public class ClassName
+{
+    /// <inheritdoc/>
+    ///<param>Test</param>
+    ///<param/>
+    ///<param name="""">Test</param>
+    ///<param name=""    "">Test</param>
+$$
+}";
+
+            var expected = new[]
+            {
+                this.CSharpDiagnostic().WithLocation(8, 8),
+                this.CSharpDiagnostic().WithLocation(9, 8),
+                this.CSharpDiagnostic().WithLocation(10, 15),
+                this.CSharpDiagnostic().WithLocation(11, 15)
+            };
+
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("$$", declaration), expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1613ElementParameterDocumentationMustDeclareParameterName();
         }
     }
 }

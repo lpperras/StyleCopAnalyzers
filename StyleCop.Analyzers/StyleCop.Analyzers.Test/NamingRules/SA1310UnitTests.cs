@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.NamingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.NamingRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.CodeFixes;
@@ -11,14 +15,7 @@
     public class SA1310UnitTests : CodeFixVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestFieldWithUnderscore()
+        public async Task TestFieldWithUnderscoreAsync()
         {
             var testCode = @"public class ClassName
 {
@@ -27,54 +24,54 @@
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithArguments("name_bar").WithLocation(3, 19);
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
 
             var fixedCode = @"public class ClassName
 {
     public string nameBar = ""baz"";
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestFieldStartingWithoutUnderscore()
+        public async Task TestFieldStartingWithoutUnderscoreAsync()
         {
             var testCode = @"public class ClassName
 {
     public string nameBar = ""baz"";
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [InlineData("m_")]
         [InlineData("s_")]
         [InlineData("t_")]
-        public async Task TestFieldStartingWithSpecialPrefix(string prefix)
+        public async Task TestFieldStartingWithSpecialPrefixAsync(string prefix)
         {
             var testCode = $@"public class ClassName
 {{
     public string {prefix}nameBar = ""baz"";
 }}";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestFieldWithUnderscorePlacedInsideNativeMethodsClass()
+        public async Task TestFieldWithUnderscorePlacedInsideNativeMethodsClassAsync()
         {
             var testCode = @"public class ClassNameNativeMethods
 {
     internal string name_bar = ""baz"";
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestFieldWithUnderscorePlacedInsideNativeMethodsClassWithIncorrectName()
+        public async Task TestFieldWithUnderscorePlacedInsideNativeMethodsClassWithIncorrectNameAsync()
         {
             var testCode = @"public class ClassNameNativeMethodsClass
 {
@@ -83,18 +80,18 @@
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithArguments("name_bar").WithLocation(3, 21);
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
 
             var fixedCode = @"public class ClassNameNativeMethodsClass
 {
     internal string nameBar = ""baz"";
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestFieldWithUnderscorePlacedInsideOuterNativeMethodsClass()
+        public async Task TestFieldWithUnderscorePlacedInsideOuterNativeMethodsClassAsync()
         {
             var testCode = @"public class ClassNameNativeMethods
 {
@@ -104,23 +101,23 @@
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestUnderscoreOnlyVariableName()
+        public async Task TestUnderscoreOnlyVariableNameAsync()
         {
             var testCode = @"public class ClassNameNativeMethodsClass
 {
     internal string _ = ""baz"";
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1310FieldNamesMustNotContainUnderscore();
+            yield return new SA1310FieldNamesMustNotContainUnderscore();
         }
 
         protected override CodeFixProvider GetCSharpCodeFixProvider()

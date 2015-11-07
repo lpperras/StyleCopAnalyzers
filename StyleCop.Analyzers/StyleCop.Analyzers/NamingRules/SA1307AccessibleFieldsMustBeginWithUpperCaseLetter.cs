@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.NamingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.NamingRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -21,7 +25,7 @@
     /// within a <c>NativeMethods</c> class.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1307AccessibleFieldsMustBeginWithUpperCaseLetter : DiagnosticAnalyzer
+    internal class SA1307AccessibleFieldsMustBeginWithUpperCaseLetter : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1307AccessibleFieldsMustBeginWithUpperCaseLetter"/>
@@ -30,40 +34,39 @@
         public const string DiagnosticId = "SA1307";
         private const string Title = "Accessible fields must begin with upper-case letter";
         private const string MessageFormat = "Field '{0}' must begin with upper-case letter";
-        private const string Category = "StyleCop.CSharp.NamingRules";
         private const string Description = "The name of a public or internal field in C# does not begin with an upper-case letter.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1307.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1307.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.NamingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> FieldDeclarationAction = HandleFieldDeclaration;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleFieldDeclaration, SyntaxKind.FieldDeclaration);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleFieldDeclaration(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(FieldDeclarationAction, SyntaxKind.FieldDeclaration);
+        }
+
+        private static void HandleFieldDeclaration(SyntaxNodeAnalysisContext context)
         {
             // To improve performance we are looking for the field instead of the declarator directly. That way we don't get called for local variables.
-            FieldDeclarationSyntax declaration = context.Node as FieldDeclarationSyntax;
-            if (declaration != null && declaration.Declaration != null)
+            FieldDeclarationSyntax declaration = (FieldDeclarationSyntax)context.Node;
+            if (declaration.Declaration != null)
             {
-                if (declaration.Modifiers.Any(SyntaxKind.ConstKeyword) || declaration.Modifiers.Any(SyntaxKind.ReadOnlyKeyword))
+                if (declaration.Modifiers.Any(SyntaxKind.ConstKeyword))
                 {
-                    // These are reported as SA1303 or SA1304, respectively
+                    // These are reported as SA1303.
                     return;
                 }
 
@@ -73,8 +76,8 @@
                     {
                         string name = declarator.Identifier.ToString();
 
-                        if (!string.IsNullOrEmpty(name) 
-                            && char.IsLower(name[0]) 
+                        if (!string.IsNullOrEmpty(name)
+                            && char.IsLower(name[0])
                             && !NamedTypeHelpers.IsContainedInNativeMethodsClass(declaration))
                         {
                             context.ReportDiagnostic(Diagnostic.Create(Descriptor, declarator.Identifier.GetLocation(), name));

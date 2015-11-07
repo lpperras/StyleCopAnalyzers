@@ -1,11 +1,16 @@
-﻿namespace StyleCop.Analyzers.ReadabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.ReadabilityRules
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// The code uses one of the basic C# types, but does not use the built-in alias for the type.
@@ -114,159 +119,192 @@
     /// </list>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1121UseBuiltInTypeAlias : DiagnosticAnalyzer
+    internal class SA1121UseBuiltInTypeAlias : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1121UseBuiltInTypeAlias"/> analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1121";
-        private const string Title = "Use built-in type alias";
-        private const string MessageFormat = "Use built-in type alias";
-        private const string Category = "StyleCop.CSharp.ReadabilityRules";
-        private const string Description = "The code uses one of the basic C# types, but does not use the built-in alias for the type.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1121.html";
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(ReadabilityResources.SA1121Title), ReadabilityResources.ResourceManager, typeof(ReadabilityResources));
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(ReadabilityResources.SA1121MessageFormat), ReadabilityResources.ResourceManager, typeof(ReadabilityResources));
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(ReadabilityResources.SA1121Description), ReadabilityResources.ResourceManager, typeof(ReadabilityResources));
+        private static readonly string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1121.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink, WellKnownDiagnosticTags.Unnecessary);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.ReadabilityRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink, WellKnownDiagnosticTags.Unnecessary);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleIdentifierNameSyntax, SyntaxKind.IdentifierName);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleIdentifierNameSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
         {
-            IdentifierNameSyntax identifierNameSyntax = context.Node as IdentifierNameSyntax;
-            if (identifierNameSyntax == null || identifierNameSyntax.IsVar)
-            {
-                return;
-            }
-
-            if (identifierNameSyntax.Identifier.IsMissing)
-            {
-                return;
-            }
-
-            switch (identifierNameSyntax.Identifier.Text)
-            {
-            case "bool":
-            case "byte":
-            case "char":
-            case "decimal":
-            case "double":
-            case "short":
-            case "int":
-            case "long":
-            case "object":
-            case "sbyte":
-            case "float":
-            case "string":
-            case "ushort":
-            case "uint":
-            case "ulong":
-                return;
-
-            default:
-                break;
-            }
-
-            if (identifierNameSyntax.FirstAncestorOrSelf<UsingDirectiveSyntax>() != null)
-            {
-                return;
-            }
-
-            SemanticModel semanticModel = context.SemanticModel;
-            INamedTypeSymbol symbol = semanticModel.GetSymbolInfo(identifierNameSyntax, context.CancellationToken).Symbol as INamedTypeSymbol;
-
-            switch (symbol?.SpecialType)
-            {
-            case SpecialType.System_Boolean:
-            case SpecialType.System_Byte:
-            case SpecialType.System_Char:
-            case SpecialType.System_Decimal:
-            case SpecialType.System_Double:
-            case SpecialType.System_Int16:
-            case SpecialType.System_Int32:
-            case SpecialType.System_Int64:
-            case SpecialType.System_Object:
-            case SpecialType.System_SByte:
-            case SpecialType.System_Single:
-            case SpecialType.System_String:
-            case SpecialType.System_UInt16:
-            case SpecialType.System_UInt32:
-            case SpecialType.System_UInt64:
-                break;
-
-            default:
-                return;
-            }
-
-            SyntaxNode locationNode = identifierNameSyntax;
-            if (identifierNameSyntax.Parent is QualifiedNameSyntax)
-            {
-                locationNode = identifierNameSyntax.Parent;
-            }
-            else if ((identifierNameSyntax.Parent as MemberAccessExpressionSyntax)?.Name == identifierNameSyntax)
-            {
-                // this "weird" syntax appears for qualified references within a nameof expression
-                locationNode = identifierNameSyntax.Parent;
-            }
-            else if (identifierNameSyntax.Parent is NameMemberCrefSyntax && identifierNameSyntax.Parent.Parent is QualifiedCrefSyntax)
-            {
-                locationNode = identifierNameSyntax.Parent.Parent;
-            }
-
-            // Allow nameof
-            if (this.IsNameInNameOfExpression(identifierNameSyntax))
-            {
-                return;
-            }
-
-            // Use built-in type alias
-            context.ReportDiagnostic(Diagnostic.Create(Descriptor, locationNode.GetLocation()));
+            Analyzer analyzer = new Analyzer(context.Compilation.GetOrCreateUsingAliasCache());
+            context.RegisterSyntaxNodeActionHonorExclusions(analyzer.HandleIdentifierNameSyntax, SyntaxKind.IdentifierName);
         }
 
-        private bool IsNameInNameOfExpression(IdentifierNameSyntax identifierNameSyntax)
+        private sealed class Analyzer
         {
-            // The only time a type name can appear as an argument is for the invocation expression created for the
-            // nameof keyword. This assumption is the foundation of the following simple analysis algorithm.
+            private readonly ConcurrentDictionary<SyntaxTree, bool> usingAliasCache;
 
-            if (identifierNameSyntax.Parent == null)
+            public Analyzer(ConcurrentDictionary<SyntaxTree, bool> usingAliasCache)
             {
+                this.usingAliasCache = usingAliasCache;
+            }
+
+            public void HandleIdentifierNameSyntax(SyntaxNodeAnalysisContext context)
+            {
+                IdentifierNameSyntax identifierNameSyntax = (IdentifierNameSyntax)context.Node;
+                if (identifierNameSyntax.IsVar)
+                {
+                    return;
+                }
+
+                if (identifierNameSyntax.Identifier.IsMissing)
+                {
+                    return;
+                }
+
+                switch (identifierNameSyntax.Identifier.ValueText)
+                {
+                case "bool":
+                case "byte":
+                case "char":
+                case "decimal":
+                case "double":
+                case "short":
+                case "int":
+                case "long":
+                case "object":
+                case "sbyte":
+                case "float":
+                case "string":
+                case "ushort":
+                case "uint":
+                case "ulong":
+                    return;
+
+                default:
+                    break;
+                }
+
+                if (identifierNameSyntax.FirstAncestorOrSelf<UsingDirectiveSyntax>() != null
+                    && identifierNameSyntax.FirstAncestorOrSelf<TypeArgumentListSyntax>() == null)
+                {
+                    return;
+                }
+
+                // Most source files will not have any using alias directives. Then we don't have to use semantics
+                // if the identifier name doesn't match the name of a special type
+                if (!identifierNameSyntax.SyntaxTree.ContainsUsingAlias(this.usingAliasCache))
+                {
+                    switch (identifierNameSyntax.Identifier.ValueText)
+                    {
+                    case nameof(Boolean):
+                    case nameof(Byte):
+                    case nameof(Char):
+                    case nameof(Decimal):
+                    case nameof(Double):
+                    case nameof(Int16):
+                    case nameof(Int32):
+                    case nameof(Int64):
+                    case nameof(Object):
+                    case nameof(SByte):
+                    case nameof(Single):
+                    case nameof(String):
+                    case nameof(UInt16):
+                    case nameof(UInt32):
+                    case nameof(UInt64):
+                        break;
+
+                    default:
+                        return;
+                    }
+                }
+
+                SemanticModel semanticModel = context.SemanticModel;
+                INamedTypeSymbol symbol = semanticModel.GetSymbolInfo(identifierNameSyntax, context.CancellationToken).Symbol as INamedTypeSymbol;
+
+                switch (symbol?.SpecialType)
+                {
+                case SpecialType.System_Boolean:
+                case SpecialType.System_Byte:
+                case SpecialType.System_Char:
+                case SpecialType.System_Decimal:
+                case SpecialType.System_Double:
+                case SpecialType.System_Int16:
+                case SpecialType.System_Int32:
+                case SpecialType.System_Int64:
+                case SpecialType.System_Object:
+                case SpecialType.System_SByte:
+                case SpecialType.System_Single:
+                case SpecialType.System_String:
+                case SpecialType.System_UInt16:
+                case SpecialType.System_UInt32:
+                case SpecialType.System_UInt64:
+                    break;
+
+                default:
+                    return;
+                }
+
+                SyntaxNode locationNode = identifierNameSyntax;
+                if (identifierNameSyntax.Parent is QualifiedNameSyntax)
+                {
+                    locationNode = identifierNameSyntax.Parent;
+                }
+                else if ((identifierNameSyntax.Parent as MemberAccessExpressionSyntax)?.Name == identifierNameSyntax)
+                {
+                    // this "weird" syntax appears for qualified references within a nameof expression
+                    locationNode = identifierNameSyntax.Parent;
+                }
+                else if (identifierNameSyntax.Parent is NameMemberCrefSyntax && identifierNameSyntax.Parent.Parent is QualifiedCrefSyntax)
+                {
+                    locationNode = identifierNameSyntax.Parent.Parent;
+                }
+
+                // Allow nameof
+                if (IsNameInNameOfExpression(identifierNameSyntax))
+                {
+                    return;
+                }
+
+                // Use built-in type alias
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, locationNode.GetLocation()));
+            }
+
+            private static bool IsNameInNameOfExpression(IdentifierNameSyntax identifierNameSyntax)
+            {
+                // The only time a type name can appear as an argument is for the invocation expression created for the
+                // nameof keyword. This assumption is the foundation of the following simple analysis algorithm.
+
+                // This covers the case nameof(Int32)
+                if (identifierNameSyntax.Parent is ArgumentSyntax)
+                {
+                    return true;
+                }
+
+                MemberAccessExpressionSyntax simpleMemberAccess = identifierNameSyntax.Parent as MemberAccessExpressionSyntax;
+
+                // This covers the case nameof(System.Int32)
+                if (simpleMemberAccess != null)
+                {
+                    // This final check ensures that we don't consider nameof(System.Int32.ToString) the same as
+                    // nameof(System.Int32)
+                    return identifierNameSyntax.Parent.Parent.IsKind(SyntaxKind.Argument)
+                        && simpleMemberAccess.Name == identifierNameSyntax;
+                }
+
                 return false;
             }
-
-            // This covers the case nameof(Int32)
-            if (identifierNameSyntax.Parent is ArgumentSyntax)
-            {
-                return true;
-            }
-
-            MemberAccessExpressionSyntax simpleMemberAccess = identifierNameSyntax.Parent as MemberAccessExpressionSyntax;
-
-            // This covers the case nameof(System.Int32)
-            if (simpleMemberAccess != null)
-            {
-                // This final check ensures that we don't consider nameof(System.Int32.ToString) the same as
-                // nameof(System.Int32)
-                return identifierNameSyntax.Parent.Parent.IsKind(SyntaxKind.Argument)
-                    && simpleMemberAccess.Name == identifierNameSyntax;
-            }
-
-            return false;
         }
     }
 }

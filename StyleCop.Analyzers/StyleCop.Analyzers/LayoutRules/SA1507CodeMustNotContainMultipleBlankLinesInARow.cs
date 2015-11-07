@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -20,12 +24,12 @@
     /// <code language="csharp">
     /// public bool Enabled
     /// {
-    ///     get 
-    ///     { 
+    ///     get
+    ///     {
     ///         Console.WriteLine("Getting the enabled flag.");
-    /// 
-    /// 
-    ///         return this.enabled; 
+    ///
+    ///
+    ///         return this.enabled;
     ///     }
     /// }
     /// </code>
@@ -34,7 +38,7 @@
     /// row.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1507CodeMustNotContainMultipleBlankLinesInARow : DiagnosticAnalyzer
+    internal class SA1507CodeMustNotContainMultipleBlankLinesInARow : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1507CodeMustNotContainMultipleBlankLinesInARow"/>
@@ -43,32 +47,31 @@
         public const string DiagnosticId = "SA1507";
         private const string Title = "Code must not contain multiple blank lines in a row";
         private const string MessageFormat = "Code must not contain multiple blank lines in a row";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
         private const string Description = "The C# code contains multiple blank lines in a row.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1507.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1507.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTreeAnalysis);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTreeAnalysis(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetRoot(context.CancellationToken);
             foreach (var token in root.DescendantTokens(descendIntoTrivia: false))

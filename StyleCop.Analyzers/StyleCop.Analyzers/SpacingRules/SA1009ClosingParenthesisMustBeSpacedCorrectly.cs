@@ -1,9 +1,16 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
+    using System.Collections.Generic;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
+    using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// A closing parenthesis within a C# statement is not spaced correctly.
@@ -21,7 +28,7 @@
     /// opening or closing parenthesis or square bracket, or a semicolon or comma.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1009ClosingParenthesisMustBeSpacedCorrectly : DiagnosticAnalyzer
+    internal class SA1009ClosingParenthesisMustBeSpacedCorrectly : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1009ClosingParenthesisMustBeSpacedCorrectly"/> analyzer.
@@ -29,75 +36,55 @@
         public const string DiagnosticId = "SA1009";
         private const string Title = "Closing parenthesis must be spaced correctly";
         private const string MessageFormat = "Closing parenthesis must{0} be {1} by a space.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
         private const string Description = "A closing parenthesis within a C# statement is not spaced correctly.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1009.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1009.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
             foreach (var token in root.DescendantTokens())
             {
-                switch (token.Kind())
+                if (token.IsKind(SyntaxKind.CloseParenToken))
                 {
-                case SyntaxKind.CloseParenToken:
-                    this.HandleCloseParenToken(context, token);
-                    break;
-
-                default:
-                    break;
+                    HandleCloseParenToken(context, token);
                 }
             }
         }
 
-        private void HandleCloseParenToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
+        private static void HandleCloseParenToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
         {
             if (token.IsMissing)
             {
                 return;
             }
 
-            bool precededBySpace;
-
-            bool followedBySpace;
-            bool lastInLine;
+            bool precededBySpace = token.IsFirstInLine() || token.IsPrecededByWhitespace();
+            bool followedBySpace = token.IsFollowedByWhitespace();
+            bool lastInLine = token.IsLastInLine();
             bool precedesStickyCharacter;
             bool allowEndOfLine = false;
 
-            bool firstInLine = token.HasLeadingTrivia || token.GetLocation()?.GetMappedLineSpan().StartLinePosition.Character == 0;
-            if (firstInLine)
-            {
-                precededBySpace = true;
-            }
-            else
-            {
-                SyntaxToken precedingToken = token.GetPreviousToken();
-                precededBySpace = precedingToken.HasTrailingTrivia;
-            }
-
-            followedBySpace = token.HasTrailingTrivia;
-            lastInLine = followedBySpace && token.TrailingTrivia.Any(SyntaxKind.EndOfLineTrivia);
             bool suppressFollowingSpaceError = false;
 
             SyntaxToken nextToken = token.GetNextToken();
@@ -128,12 +115,14 @@
 
             case SyntaxKind.PlusToken:
                 precedesStickyCharacter = nextToken.Parent.IsKind(SyntaxKind.UnaryPlusExpression);
+
                 // this will be reported as SA1022
                 suppressFollowingSpaceError = true;
                 break;
 
             case SyntaxKind.MinusToken:
                 precedesStickyCharacter = nextToken.Parent.IsKind(SyntaxKind.UnaryMinusExpression);
+
                 // this will be reported as SA1021
                 suppressFollowingSpaceError = true;
                 break;
@@ -152,6 +141,16 @@
                 precedesStickyCharacter = !requireSpace;
                 break;
 
+            case SyntaxKind.PlusPlusToken:
+            case SyntaxKind.MinusMinusToken:
+                precedesStickyCharacter = true;
+                suppressFollowingSpaceError = false;
+                break;
+
+            case SyntaxKind.CloseBraceToken:
+                precedesStickyCharacter = nextToken.Parent is InterpolationSyntax;
+                break;
+
             default:
                 precedesStickyCharacter = false;
                 break;
@@ -167,23 +166,43 @@
                 break;
             }
 
+            foreach (var trivia in token.TrailingTrivia)
+            {
+                if (trivia.IsKind(SyntaxKind.EndOfLineTrivia))
+                {
+                    break;
+                }
+                else if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
+                    || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
+                {
+                    lastInLine = false;
+                    precedesStickyCharacter = false;
+                    break;
+                }
+            }
+
             if (precededBySpace)
             {
                 // Closing parenthesis must{ not} be {preceded} by a space.
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), " not", "preceded"));
+                var properties = token.IsFirstInLine()
+                    ? TokenSpacingProperties.RemovePreceding
+                    : TokenSpacingProperties.RemoveImmediatePreceding;
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, " not", "preceded"));
             }
 
             if (!suppressFollowingSpaceError)
             {
-                if (!precedesStickyCharacter && !followedBySpace)
+                if (!precedesStickyCharacter && !followedBySpace && !lastInLine)
                 {
                     // Closing parenthesis must{} be {followed} by a space.
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), string.Empty, "followed"));
+                    var properties = TokenSpacingProperties.InsertFollowing;
+                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, string.Empty, "followed"));
                 }
                 else if (precedesStickyCharacter && followedBySpace && (!lastInLine || !allowEndOfLine))
                 {
                     // Closing parenthesis must{ not} be {followed} by a space.
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), " not", "followed"));
+                    var properties = TokenSpacingProperties.RemoveFollowing;
+                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, " not", "followed"));
                 }
             }
         }

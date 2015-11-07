@@ -1,115 +1,172 @@
-﻿namespace StyleCop.Analyzers.Test.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.LayoutRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.CodeAnalysis;
+    using Microsoft.CodeAnalysis.CodeFixes;
     using Microsoft.CodeAnalysis.Diagnostics;
     using StyleCop.Analyzers.LayoutRules;
     using TestHelper;
     using Xunit;
 
-    public class SA1504UnitTests : DiagnosticVerifier
+    public class SA1504UnitTests : CodeFixVerifier
     {
-        [Fact]
-        public async Task TestEmptySource()
+        [Theory]
+        [InlineData("int Prop")]
+        [InlineData("int this[int index]")]
+        public async Task TestPropertyGetInOneLineSetInMultipleLinesAsync(string propertyDeclaration)
         {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestPropertyGetInOneLineSetInMultipleLines()
-        {
-            var testCode = @"
+            var testCode = $@"
 public class Foo
-{
-    public int Prop
-    {
-        get { return 1; }
+{{
+    public {propertyDeclaration}
+    {{
+        get {{ return 1; }}
         set
-        {
-        }
-    }
-}";
+        {{
+        }}
+    }}
+}}";
+
+            var fixedTestCodeSingle = $@"
+public class Foo
+{{
+    public {propertyDeclaration}
+    {{
+        get {{ return 1; }}
+        set {{ }}
+    }}
+}}";
+
+            var fixedTestCodeMultiple = $@"
+public class Foo
+{{
+    public {propertyDeclaration}
+    {{
+        get
+        {{
+            return 1;
+        }}
+
+        set
+        {{
+        }}
+    }}
+}}";
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(6, 9);
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedTestCodeSingle, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedTestCodeMultiple, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCodeSingle, codeFixIndex: 0).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCodeMultiple, codeFixIndex: 1).ConfigureAwait(false);
         }
 
-        [Fact]
-        public async Task TestPropertyGetAndSetOnOneLine()
+        [Theory]
+        [InlineData("int Prop")]
+        [InlineData("int this[int index]")]
+        public async Task TestPropertyGetInOneLineSetInMultipleLinesWithMultipleStatementsAsync(string propertyDeclaration)
         {
-            var testCode = @"
+            var testCode = $@"
 public class Foo
-{
-    public int Prop
-    {
-        get { return 1; }
-        set { }
-    }
-}";
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestPropertyGetAndSetOnOneLineWithComments()
-        {
-            var testCode = @"
-public class Foo
-{
-    public int Prop
-    {
-        // here's get
-        get { return 1; }
-        set { }
-    }
-}";
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestPropertyGetAndSetOnMultipleLines()
-        {
-            var testCode = @"
-public class Foo
-{
-    public int Prop
-    {
-        get 
-        { 
-            return 1; 
-        }
+{{
+    public {propertyDeclaration}
+    {{
+        get {{ return backingField; }}
         set
-        {
-        }
-    }
-}";
+        {{
+            this.backingField = value;
+            this.OnPropertyChanged();
+        }}
+    }}
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
+    private int backingField;
 
-        [Fact]
-        public async Task TestPropertyOnlyGetter()
-        {
-            var testCode = @"
+    private void OnPropertyChanged()
+    {{
+
+    }}
+}}";
+            var fixedTestCodeMultiple = $@"
 public class Foo
-{
-    public int Prop
-    {
-        get 
-        { 
-            return 1; 
-        }
-    }
-}";
+{{
+    public {propertyDeclaration}
+    {{
+        get
+        {{
+            return backingField;
+        }}
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+        set
+        {{
+            this.backingField = value;
+            this.OnPropertyChanged();
+        }}
+    }}
+
+    private int backingField;
+
+    private void OnPropertyChanged()
+    {{
+
+    }}
+}}";
+
+            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(6, 9);
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedTestCodeMultiple, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCodeMultiple).ConfigureAwait(false);
+        }
+
+        [Theory]
+        [InlineData("int Prop")]
+        [InlineData("int this[int index]")]
+        public async Task TestPropertyGetAndSetOnOneLineWithCommentsAsync(string propertyDeclaration)
+        {
+            var testCode = $@"
+public class Foo
+{{
+    public {propertyDeclaration}
+    {{
+        // here's get
+        get {{ return 1; }}
+        set {{ }}
+    }}
+}}";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        [Theory]
+        [InlineData("int Prop")]
+        [InlineData("int this[int index]")]
+        public async Task TestPropertyOnlyGetterAsync(string propertyDeclaration)
+        {
+            var testCode = $@"
+public class Foo
+{{
+    public {propertyDeclaration}
+    {{
+        get 
+        {{
+            return 1; 
+        }}
+    }}
+}}";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestAutoProperty()
+        public async Task TestAutoPropertyAsync()
         {
             var testCode = @"
 public class Foo
@@ -120,11 +177,11 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestPropertyExpressionBody()
+        public async Task TestPropertyExpressionBodyAsync()
         {
             var testCode = @"
 public class Foo
@@ -132,101 +189,11 @@ public class Foo
     public int Prop => 1;
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestIndexerSetInOneLineGetInMultipleLines()
-        {
-            var testCode = @"
-public class Foo
-{
-    public int this[int index]
-    {
-        get 
-        { 
-            return 1; 
-        }
-        set {}
-    }
-}";
-
-            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(10, 9);
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestIndexerOnlyGetter()
-        {
-            var testCode = @"
-public class Foo
-{
-    public int this[int index]
-    {
-        get { return 1; }
-    }
-}";
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestIndexerGetAndSetOnOneLine()
-        {
-            var testCode = @"
-public class Foo
-{
-    public int this[int index]
-    {
-        get { return 1; }
-        set { }
-    }
-}";
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestIndexerGetAndSetOnOneLineWithComments()
-        {
-            var testCode = @"
-public class Foo
-{
-    public int this[int index]
-    {
-        // here's get
-        get { return 1; }
-        set { }
-    }
-}";
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestIndexerGetAndSetOnMultipleLines()
-        {
-            var testCode = @"
-public class Foo
-{
-    public int this[int index]
-    {
-        get 
-        { 
-            return 1; 
-        }
-        set
-        {
-        }
-    }
-}";
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestEventAddIsOnMultipleLinesAndRemoveIsOnOneLine()
+        public async Task TestEventAddIsOnMultipleLinesAndRemoveIsOnOneLineAsync()
         {
             var testCode = @"
 public class Foo
@@ -243,15 +210,7 @@ public class Foo
     }
 }";
 
-            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(12, 9);
-
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestEventAddAndRemoveAreOnOneLine()
-        {
-            var testCode = @"
+            var fixedTestCodeSingle = @"
 public class Foo
 {
     private System.EventHandler nameChanged;
@@ -263,35 +222,37 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestEventAddAndRemoveAreOnMultipleLines()
-        {
-            var testCode = @"
+            var fixedTestCodeMultiple = @"
 public class Foo
 {
     private System.EventHandler nameChanged;
 
     public event System.EventHandler NameChanged
     {
-        add 
-        { 
-            this.nameChanged += value; 
+        add
+        {
+            this.nameChanged += value;
         }
-        remove 
-        { 
-            this.nameChanged -= value; 
+
+        remove
+        {
+            this.nameChanged -= value;
         }
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(8, 9);
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedTestCodeSingle, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedTestCodeMultiple, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCodeSingle, codeFixIndex: 0).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCodeMultiple, codeFixIndex: 1).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestEventAddAndRemoveAreOnOneLineWithComment()
+        public async Task TestEventAddAndRemoveAreOnOneLineWithCommentAsync()
         {
             var testCode = @"
 public class Foo
@@ -306,12 +267,120 @@ public class Foo
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        /// <summary>
+        /// Verifies that a syntactically correct invalid accessor declaration will not report SA1504.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Fact]
+        public async Task TestAccessorWithoutBodyAsync()
         {
-            return new SA1504AllAccessorsMustBeSingleLineOrMultiLine();
+            var testCode = @"
+public class Foo
+{
+    public int Prop
+    {
+        get;
+
+        set
+        {
+        }
+    }
+}";
+            DiagnosticResult[] expected =
+            {
+                new DiagnosticResult()
+                {
+                    Id = "CS0501",
+                    Message = "'Foo.Prop.get' must declare a body because it is not marked abstract, extern, or partial",
+                    Severity = DiagnosticSeverity.Error,
+                    Locations = new[] { new DiagnosticResultLocation("Test0.cs", 6, 9) }
+                }
+            };
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Verifies that the code fix will properly handle kinds of inline comments.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Fact]
+        public async Task TestPropertyWithMultipleInlineCommentsAsync()
+        {
+            var testCode = @"
+public class Foo
+{
+    /// <summary>
+    /// Gets the test property.
+    /// </summary>
+    public int Prop
+    {
+        /* c1 */ get /* c2 */ { /* c3 */ return 1; /* c4 */ } /* c5 */
+        /* c6 */
+        protected
+        /* c7 */ internal
+        /* c8 */ set /* c9 */
+        {
+            /* c10 */
+        } /* c11 */
+    }
+}";
+
+            var fixedTestCodeSingle = @"
+public class Foo
+{
+    /// <summary>
+    /// Gets the test property.
+    /// </summary>
+    public int Prop
+    {
+        /* c1 */ get /* c2 */ { /* c3 */ return 1; /* c4 */ } /* c5 */
+        /* c6 */ protected /* c7 */ internal /* c8 */ set /* c9 */ { /* c10 */ } /* c11 */
+    }
+}";
+
+            var fixedTestCodeMultiple = @"
+public class Foo
+{
+    /// <summary>
+    /// Gets the test property.
+    /// </summary>
+    public int Prop
+    {
+        /* c1 */ get /* c2 */
+        { /* c3 */
+            return 1; /* c4 */
+        } /* c5 */
+
+        /* c6 */ protected /* c7 */ internal /* c8 */ set /* c9 */
+        { /* c10 */
+        } /* c11 */
+    }
+}";
+
+            DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(9, 18);
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedTestCodeSingle, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedTestCodeMultiple, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCodeSingle, codeFixIndex: 0).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedTestCodeMultiple, codeFixIndex: 1).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1504AllAccessorsMustBeSingleLineOrMultiLine();
+        }
+
+        /// <inheritdoc/>
+        protected override CodeFixProvider GetCSharpCodeFixProvider()
+        {
+            return new SA1504CodeFixProvider();
         }
     }
 }

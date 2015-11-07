@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.DocumentationRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.Diagnostics;
@@ -8,19 +12,12 @@
     using Xunit;
 
     /// <summary>
-    /// This class contains unit tests for <see cref="SA1602EnumerationItemsMustBeDocumented"/>-
+    /// This class contains unit tests for <see cref="SA1602EnumerationItemsMustBeDocumented"/>.
     /// </summary>
-    public class SA1602UnitTests : CodeFixVerifier
+    public class SA1602UnitTests : DiagnosticVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestEnumWithDocumentation()
+        public async Task TestEnumWithDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -37,7 +34,7 @@ enum TypeName
         }
 
         [Fact]
-        public async Task TestEnumWithoutDocumentation()
+        public async Task TestEnumWithoutDocumentationAsync()
         {
             var testCode = @"
 enum TypeName
@@ -51,7 +48,7 @@ enum TypeName
         }
 
         [Fact]
-        public async Task TestEnumWithEmptyDocumentation()
+        public async Task TestEnumWithEmptyDocumentationAsync()
         {
             var testCode = @"
 /// <summary>
@@ -70,9 +67,9 @@ enum TypeName
             await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1602EnumerationItemsMustBeDocumented();
+            yield return new SA1602EnumerationItemsMustBeDocumented();
         }
     }
 }

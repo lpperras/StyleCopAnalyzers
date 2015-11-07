@@ -1,8 +1,17 @@
-﻿namespace StyleCop.Analyzers.NamingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.NamingRules
 {
+    using System;
     using System.Collections.Immutable;
+    using System.Text.RegularExpressions;
+    using Helpers;
     using Microsoft.CodeAnalysis;
+    using Microsoft.CodeAnalysis.CSharp;
+    using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using Settings.ObjectModel;
 
     /// <summary>
     /// The name of a field or variable in C# uses Hungarian notation.
@@ -38,37 +47,108 @@
     /// <c>NativeMethods</c> class.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1305FieldNamesMustNotUseHungarianNotation : DiagnosticAnalyzer
+    internal class SA1305FieldNamesMustNotUseHungarianNotation : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1305FieldNamesMustNotUseHungarianNotation"/> analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1305";
         private const string Title = "Field names must not use Hungarian notation";
-        private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.NamingRules";
+        private const string MessageFormat = "{0} '{1}' must not use Hungarian notation";
         private const string Description = "The name of a field or variable in C# uses Hungarian notation.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1305.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1305.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.NamingRules, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly ImmutableArray<string> CommonPrefixes =
+            ImmutableArray.Create("as", "at", "by", "do", "go", "if", "in", "is", "it", "no", "of", "on", "or", "to");
+
+        private static readonly Regex HungarianRegex = new Regex(@"^(?<notation>[a-z]{1,2})[A-Z]");
+
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Implement analysis
+            context.RegisterCompilationStartAction(CompilationStartAction);
+        }
+
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            Analyzer analyzer = new Analyzer(context.Options);
+            context.RegisterSyntaxNodeActionHonorExclusions(analyzer.HandleVariableDeclarationSyntax, SyntaxKind.VariableDeclaration);
+        }
+
+        private sealed class Analyzer
+        {
+            private readonly NamingSettings namingSettings;
+
+            public Analyzer(AnalyzerOptions options)
+            {
+                StyleCopSettings settings = options.GetStyleCopSettings();
+                this.namingSettings = settings.NamingRules;
+            }
+
+            public void HandleVariableDeclarationSyntax(SyntaxNodeAnalysisContext context)
+            {
+                var syntax = (VariableDeclarationSyntax)context.Node;
+
+                if (syntax.Parent.IsKind(SyntaxKind.EventFieldDeclaration))
+                {
+                    return;
+                }
+
+                if (NamedTypeHelpers.IsContainedInNativeMethodsClass(syntax))
+                {
+                    return;
+                }
+
+                var fieldDeclaration = syntax.Parent.IsKind(SyntaxKind.FieldDeclaration);
+                foreach (var variableDeclarator in syntax.Variables)
+                {
+                    if (variableDeclarator == null)
+                    {
+                        continue;
+                    }
+
+                    var identifier = variableDeclarator.Identifier;
+                    if (identifier.IsMissing)
+                    {
+                        continue;
+                    }
+
+                    string name = identifier.ValueText;
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        continue;
+                    }
+
+                    var match = HungarianRegex.Match(name);
+                    if (!match.Success)
+                    {
+                        continue;
+                    }
+
+                    var notationValue = match.Groups["notation"].Value;
+                    if (this.namingSettings.AllowCommonHungarianPrefixes && CommonPrefixes.Contains(notationValue))
+                    {
+                        continue;
+                    }
+
+                    if (this.namingSettings.AllowedHungarianPrefixes.Contains(notationValue))
+                    {
+                        continue;
+                    }
+
+                    // Variable names must begin with lower-case letter
+                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, identifier.GetLocation(), fieldDeclaration ? "field" : "variable", name));
+                }
+            }
         }
     }
 }

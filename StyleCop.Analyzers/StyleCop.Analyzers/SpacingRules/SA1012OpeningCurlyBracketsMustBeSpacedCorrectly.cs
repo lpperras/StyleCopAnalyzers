@@ -1,10 +1,15 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// An opening curly bracket within a C# element is not spaced correctly.
@@ -20,7 +25,7 @@
     /// line.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1012OpeningCurlyBracketsMustBeSpacedCorrectly : DiagnosticAnalyzer
+    internal class SA1012OpeningCurlyBracketsMustBeSpacedCorrectly : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1012OpeningCurlyBracketsMustBeSpacedCorrectly"/>
@@ -29,115 +34,77 @@
         public const string DiagnosticId = "SA1012";
         private const string Title = "Opening curly brackets must be spaced correctly";
         private const string MessageFormat = "Opening curly bracket must{0} be {1} by a space.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
         private const string Description = "An opening curly bracket within a C# element is not spaced correctly.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1012.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1012.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
             foreach (var token in root.DescendantTokens())
             {
-                switch (token.Kind())
+                if (token.IsKind(SyntaxKind.OpenBraceToken))
                 {
-                case SyntaxKind.OpenBraceToken:
-                    this.HandleOpenBraceToken(context, token);
-                    break;
-
-                default:
-                    break;
+                    HandleOpenBraceToken(context, token);
                 }
             }
         }
 
-        private void HandleOpenBraceToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
+        private static void HandleOpenBraceToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
         {
             if (token.IsMissing)
             {
                 return;
             }
 
-            bool precededBySpace;
-            bool firstInLine;
-            bool allowLeadingSpace;
-            bool allowLeadingNoSpace;
-
-            bool followedBySpace;
-            bool lastInLine;
-
-            firstInLine = token.HasLeadingTrivia || token.GetLocation()?.GetMappedLineSpan().StartLinePosition.Character == 0;
-            if (firstInLine)
-            {
-                precededBySpace = true;
-                allowLeadingSpace = true;
-                allowLeadingNoSpace = true;
-            }
-            else
-            {
-                SyntaxToken precedingToken = token.GetPreviousToken();
-                precededBySpace = precedingToken.HasTrailingTrivia;
-                switch (precedingToken.Kind())
-                {
-                case SyntaxKind.OpenParenToken:
-                    allowLeadingNoSpace = true;
-                    allowLeadingSpace = false;
-                    break;
-
-                default:
-                    allowLeadingNoSpace = false;
-                    allowLeadingSpace = true;
-                    break;
-                }
-            }
-
-            followedBySpace = token.HasTrailingTrivia;
-            lastInLine = followedBySpace && token.TrailingTrivia.Any(SyntaxKind.EndOfLineTrivia);
+            bool followedBySpace = token.IsFollowedByWhitespace();
 
             if (token.Parent is InterpolationSyntax)
             {
-                // Don't report for interpolation string inlets
+                if (followedBySpace)
+                {
+                    // Opening curly bracket must{} be {followed} by a space.
+                    var properties = TokenSpacingProperties.RemoveFollowing;
+                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, " not", "followed"));
+                }
+
                 return;
             }
 
-            if (!firstInLine)
+            bool precededBySpace = token.IsFirstInLine() || token.IsPrecededByWhitespace();
+
+            if (!precededBySpace)
             {
-                if (!allowLeadingSpace && precededBySpace)
-                {
-                    // Opening curly bracket must{ not} be {preceded} by a space.
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), " not", "preceded"));
-                }
-                else if (!allowLeadingNoSpace && !precededBySpace)
-                {
-                    // Opening curly bracket must{} be {preceded} by a space.
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), string.Empty, "preceded"));
-                }
+                // Opening curly bracket must{} be {preceded} by a space.
+                var properties = TokenSpacingProperties.InsertPreceding;
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, string.Empty, "preceded"));
             }
 
-            if (!lastInLine && !followedBySpace)
+            if (!token.IsLastInLine() && !followedBySpace)
             {
                 // Opening curly bracket must{} be {followed} by a space.
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), string.Empty, "followed"));
+                var properties = TokenSpacingProperties.InsertFollowing;
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), properties, string.Empty, "followed"));
             }
         }
     }

@@ -1,5 +1,10 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
+    using System;
+    using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.Linq;
     using Helpers;
@@ -51,7 +56,7 @@
     /// is multi-line.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1516ElementsMustBeSeparatedByBlankLine : DiagnosticAnalyzer
+    internal class SA1516ElementsMustBeSeparatedByBlankLine : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1516ElementsMustBeSeparatedByBlankLine"/> analyzer.
@@ -59,45 +64,47 @@
         public const string DiagnosticId = "SA1516";
         private const string Title = "Elements must be separated by blank line";
         private const string MessageFormat = "Elements must be separated by blank line";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
         private const string Description = "Adjacent C# elements are not separated by a blank line.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1516.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1516.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly ImmutableArray<SyntaxKind> TypeDeclarationKinds =
+            ImmutableArray.Create(SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.InterfaceDeclaration);
+
+        private static readonly ImmutableArray<SyntaxKind> BasePropertyDeclarationKinds =
+            ImmutableArray.Create(SyntaxKind.PropertyDeclaration, SyntaxKind.EventDeclaration, SyntaxKind.IndexerDeclaration);
+
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> TypeDeclarationAction = HandleTypeDeclaration;
+        private static readonly Action<SyntaxNodeAnalysisContext> CompilationUnitAction = HandleCompilationUnit;
+        private static readonly Action<SyntaxNodeAnalysisContext> NamespaceDeclarationAction = HandleNamespaceDeclaration;
+        private static readonly Action<SyntaxNodeAnalysisContext> BasePropertyDeclarationAction = HandleBasePropertyDeclaration;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleTypeDeclaration, SyntaxKind.ClassDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleTypeDeclaration, SyntaxKind.StructDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleTypeDeclaration, SyntaxKind.InterfaceDeclaration);
-
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleCompilationUnit, SyntaxKind.CompilationUnit);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleNamespaceDeclaration, SyntaxKind.NamespaceDeclaration);
-
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandlePropertyDeclaration, SyntaxKind.PropertyDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandlePropertyDeclaration, SyntaxKind.EventDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandlePropertyDeclaration, SyntaxKind.IndexerDeclaration);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandlePropertyDeclaration(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
         {
-            var propertyDeclaration = context.Node as BasePropertyDeclarationSyntax;
+            context.RegisterSyntaxNodeActionHonorExclusions(TypeDeclarationAction, TypeDeclarationKinds);
+            context.RegisterSyntaxNodeActionHonorExclusions(CompilationUnitAction, SyntaxKind.CompilationUnit);
+            context.RegisterSyntaxNodeActionHonorExclusions(NamespaceDeclarationAction, SyntaxKind.NamespaceDeclaration);
+            context.RegisterSyntaxNodeActionHonorExclusions(BasePropertyDeclarationAction, BasePropertyDeclarationKinds);
+        }
 
-            if (propertyDeclaration?.AccessorList?.Accessors != null)
+        private static void HandleBasePropertyDeclaration(SyntaxNodeAnalysisContext context)
+        {
+            var propertyDeclaration = (BasePropertyDeclarationSyntax)context.Node;
+
+            if (propertyDeclaration.AccessorList?.Accessors != null)
             {
                 var accessors = propertyDeclaration.AccessorList.Accessors;
 
@@ -121,7 +128,7 @@
             }
         }
 
-        private void HandleTypeDeclaration(SyntaxNodeAnalysisContext context)
+        private static void HandleTypeDeclaration(SyntaxNodeAnalysisContext context)
         {
             var typeDeclaration = context.Node as TypeDeclarationSyntax;
 
@@ -129,11 +136,11 @@
             {
                 var members = typeDeclaration.Members;
 
-                this.HandleMemberList(context, members);
+                HandleMemberList(context, members);
             }
         }
 
-        private void HandleCompilationUnit(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationUnit(SyntaxNodeAnalysisContext context)
         {
             var compilationUnit = context.Node as CompilationUnitSyntax;
 
@@ -141,7 +148,7 @@
             {
                 var members = compilationUnit.Members;
 
-                this.HandleMemberList(context, members);
+                HandleMemberList(context, members);
 
                 if (members.Count > 0 && compilationUnit.Usings.Count > 0)
                 {
@@ -155,7 +162,7 @@
             }
         }
 
-        private void HandleNamespaceDeclaration(SyntaxNodeAnalysisContext context)
+        private static void HandleNamespaceDeclaration(SyntaxNodeAnalysisContext context)
         {
             var namespaceDeclaration = context.Node as NamespaceDeclarationSyntax;
 
@@ -163,7 +170,7 @@
             {
                 var members = namespaceDeclaration.Members;
 
-                this.HandleMemberList(context, members);
+                HandleMemberList(context, members);
 
                 if (members.Count > 0 && namespaceDeclaration.Usings.Count > 0)
                 {
@@ -177,20 +184,22 @@
             }
         }
 
-        private void HandleMemberList(SyntaxNodeAnalysisContext context, SyntaxList<MemberDeclarationSyntax> members)
+        private static void HandleMemberList(SyntaxNodeAnalysisContext context, SyntaxList<MemberDeclarationSyntax> members)
         {
             for (int i = 1; i < members.Count; i++)
             {
                 if (!members[i - 1].ContainsDiagnostics && !members[i].ContainsDiagnostics)
                 {
                     // Report if
-                    // the previous declaration spans across multiple lines
+                    // the current declaration is not a field declaration
                     // or the previous declaration is of different type
-                    // or the current declaration has documentation
-                    // or the current declaration is not a field declaration,
-                    if (IsMultiline(members[i - 1])
+                    // or the previous declaration spans across multiple lines
+                    //
+                    // Note that the order of checking is important, as the call to IsMultiLine requires a FieldDeclarationSyntax,
+                    // something that can only be guaranteed if the first two checks fail.
+                    if (!members[i].IsKind(SyntaxKind.FieldDeclaration)
                         || !members[i - 1].IsKind(members[i].Kind())
-                        || !members[i].IsKind(SyntaxKind.FieldDeclaration))
+                        || IsMultiline((FieldDeclarationSyntax)members[i - 1]))
                     {
                         ReportIfThereIsNoBlankLine(context, members[i - 1], members[i]);
                     }
@@ -198,10 +207,30 @@
             }
         }
 
-        private static bool IsMultiline(SyntaxNode node)
+        private static bool IsMultiline(FieldDeclarationSyntax fieldDeclaration)
         {
-            var lineSpan = node.GetLocation().GetLineSpan();
+            var lineSpan = fieldDeclaration.GetLineSpan();
+            var attributeLists = fieldDeclaration.AttributeLists;
 
+            int startLine;
+
+            // Exclude attributes when determining if a field declaration spans multiple lines
+            if (attributeLists.Count > 0)
+            {
+                var lastAttributeSpan = fieldDeclaration.SyntaxTree.GetLineSpan(attributeLists.Last().FullSpan);
+                startLine = lastAttributeSpan.EndLinePosition.Line;
+            }
+            else
+            {
+                startLine = lineSpan.StartLinePosition.Line;
+            }
+
+            return startLine != lineSpan.EndLinePosition.Line;
+        }
+
+        private static bool IsMultiline(AccessorDeclarationSyntax accessorDeclaration)
+        {
+            var lineSpan = accessorDeclaration.GetLineSpan();
             return lineSpan.StartLinePosition.Line != lineSpan.EndLinePosition.Line;
         }
 
@@ -215,10 +244,9 @@
 
             var parent = firstNode.Parent;
 
-            var allTrivia = parent.DescendantTrivia(TextSpan.FromBounds(firstNode.Span.End, secondNode.Span.Start),
-                descendIntoTrivia: true,
-                descendIntoChildren: n => true)
-                .ToImmutableList();
+            var allTrivia = parent.DescendantTrivia(
+                TextSpan.FromBounds(firstNode.Span.End, secondNode.Span.Start),
+                descendIntoTrivia: true);
 
             if (!HasEmptyLine(allTrivia))
             {
@@ -228,8 +256,6 @@
 
         private static Location GetDiagnosticLocation(SyntaxNode node)
         {
-            Location nodeLocation = node.GetLocation();
-
             if (node.HasLeadingTrivia)
             {
                 return node.GetLeadingTrivia()[0].GetLocation();
@@ -244,23 +270,23 @@
             return Location.None;
         }
 
-        private static bool HasEmptyLine(ImmutableList<SyntaxTrivia> allTrivia)
+        private static bool HasEmptyLine(IEnumerable<SyntaxTrivia> allTrivia)
         {
-            allTrivia = allTrivia.Where(x => !x.IsKind(SyntaxKind.WhitespaceTrivia)).ToImmutableList();
-            for (int i = 1; i < allTrivia.Count; i++)
+            allTrivia = allTrivia.Where(x => !x.IsKind(SyntaxKind.WhitespaceTrivia));
+
+            SyntaxTrivia previousTrivia = default(SyntaxTrivia);
+
+            foreach (var trivia in allTrivia)
             {
-                if (allTrivia[i].IsKind(SyntaxKind.EndOfLineTrivia))
+                if (trivia.IsKind(SyntaxKind.EndOfLineTrivia))
                 {
-                    if (allTrivia[i - 1].IsKind(SyntaxKind.EndOfLineTrivia))
+                    if (previousTrivia.IsKind(SyntaxKind.EndOfLineTrivia))
                     {
                         return true;
                     }
                 }
-                else
-                {
-                    // We can skip one trivia
-                    i++;
-                }
+
+                previousTrivia = trivia;
             }
 
             return false;

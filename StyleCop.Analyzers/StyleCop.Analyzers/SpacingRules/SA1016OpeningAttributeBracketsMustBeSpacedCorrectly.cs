@@ -1,9 +1,14 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// An opening attribute bracket within a C# element is not spaced correctly.
@@ -16,41 +21,40 @@
     /// character on the line.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1016OpeningAttributeBracketsMustBeSpacedCorrectly : DiagnosticAnalyzer
+    internal class SA1016OpeningAttributeBracketsMustBeSpacedCorrectly : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1016OpeningAttributeBracketsMustBeSpacedCorrectly"/>
         /// analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1016";
-        private const string Title = "Opening attribute brackets must be spaced correctly";
-        private const string MessageFormat = "Opening attribute brackets must not be followed by a space.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
-        private const string Description = "An opening attribute bracket within a C# element is not spaced correctly.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1016.html";
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(SpacingResources.SA1016Title), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(SpacingResources.SA1016MessageFormat), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(SpacingResources.SA1016Description), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1016.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
             foreach (var token in root.DescendantTokens())
@@ -58,7 +62,7 @@
                 switch (token.Kind())
                 {
                 case SyntaxKind.OpenBracketToken:
-                    this.HandleOpenBracketToken(context, token);
+                    HandleOpenBracketToken(context, token);
                     break;
 
                 default:
@@ -67,7 +71,7 @@
             }
         }
 
-        private void HandleOpenBracketToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
+        private static void HandleOpenBracketToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
         {
             if (token.IsMissing)
             {
@@ -79,13 +83,23 @@
                 return;
             }
 
-            if (!token.HasTrailingTrivia || token.TrailingTrivia.Any(SyntaxKind.EndOfLineTrivia))
+            if (token.IsLastInLine())
+            {
+                return;
+            }
+
+            if (!token.HasTrailingTrivia)
+            {
+                return;
+            }
+
+            if (!token.TrailingTrivia[0].IsKind(SyntaxKind.WhitespaceTrivia))
             {
                 return;
             }
 
             // Opening attribute brackets must not be followed by a space.
-            context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation()));
+            context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), TokenSpacingProperties.RemoveFollowing));
         }
     }
 }

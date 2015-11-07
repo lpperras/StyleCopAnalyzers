@@ -1,10 +1,16 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
     using System.Collections.Immutable;
+    using System.Linq;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// An opening parenthesis within a C# statement is not spaced correctly.
@@ -19,185 +25,193 @@
     /// line.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1008OpeningParenthesisMustBeSpacedCorrectly : DiagnosticAnalyzer
+    internal class SA1008OpeningParenthesisMustBeSpacedCorrectly : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1008OpeningParenthesisMustBeSpacedCorrectly"/> analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1008";
         private const string Title = "Opening parenthesis must be spaced correctly";
-        private const string MessageFormat = "Opening parenthesis must{0} be {1} by a space.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
         private const string Description = "An opening parenthesis within a C# statement is not spaced correctly.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1008.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1008.md";
 
-        private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+        private const string MessageNotPreceded = "Opening parenthesis must not be preceded by a space.";
+        private const string MessagePreceded = "Opening parenthesis must be preceded by a space.";
+        private const string MessageNotFollowed = "Opening parenthesis must not be followed by a space.";
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
+
+        /// <summary>
+        /// Gets the diagnostic descriptor for an opening parenthesis that must not be preceded by whitespace.
+        /// </summary>
+        /// <value>The diagnostic descriptor for an opening parenthesis that must not be preceded by whitespace.</value>
+        public static DiagnosticDescriptor DescriptorNotPreceded { get; }
+            = new DiagnosticDescriptor(DiagnosticId, Title, MessageNotPreceded, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
+
+        /// <summary>
+        /// Gets the diagnostic descriptor for an opening parenthesis that must be preceded by whitespace.
+        /// </summary>
+        /// <value>The diagnostic descriptor for an opening parenthesis that must be preceded by whitespace.</value>
+        public static DiagnosticDescriptor DescriptorPreceded { get; }
+            = new DiagnosticDescriptor(DiagnosticId, Title, MessagePreceded, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
+
+        /// <summary>
+        /// Gets the diagnostic descriptor for an opening parenthesis that must not be followed by whitespace.
+        /// </summary>
+        /// <value>The diagnostic descriptor for an opening parenthesis that must not be followed by whitespace.</value>
+        public static DiagnosticDescriptor DescriptorNotFollowed { get; }
+            = new DiagnosticDescriptor(DiagnosticId, Title, MessageNotFollowed, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(DescriptorNotPreceded);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
-            foreach (var token in root.DescendantTokens())
+            foreach (var token in root.DescendantTokens(descendIntoTrivia: true).Where(t => t.IsKind(SyntaxKind.OpenParenToken)))
             {
-                switch (token.Kind())
-                {
-                case SyntaxKind.OpenParenToken:
-                    this.HandleOpenParenToken(context, token);
-                    break;
-
-                default:
-                    break;
-                }
+                HandleOpenParenToken(context, token);
             }
         }
 
-        private void HandleOpenParenToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
+        private static void HandleOpenParenToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
         {
             if (token.IsMissing)
             {
                 return;
             }
 
-            bool precededBySpace;
-            bool firstInLine;
-            bool allowLeadingSpace;
-            bool allowLeadingNoSpace;
-            bool reportPrecedingError = true;
-
-            bool followedBySpace;
-            bool lastInLine;
-            bool reportFollowingError = true;
-
-            firstInLine = token.HasLeadingTrivia || token.GetLocation()?.GetMappedLineSpan().StartLinePosition.Character == 0;
-            if (firstInLine)
+            if (token.IsLastInLine())
             {
-                precededBySpace = true;
-                allowLeadingSpace = true;
-                allowLeadingNoSpace = true;
+                // ignore open parenthesis when last on line.
+                return;
             }
-            else
+
+            var prevToken = token.GetPreviousToken();
+            var leadingTriviaList = TriviaHelper.MergeTriviaLists(prevToken.TrailingTrivia, token.LeadingTrivia);
+
+            var isFirstOnLine = false;
+            if (prevToken.GetLineSpan().EndLinePosition.Line < token.GetLineSpan().StartLinePosition.Line)
             {
-                SyntaxToken precedingToken = token.GetPreviousToken();
-                precededBySpace = precedingToken.HasTrailingTrivia;
-                switch (precedingToken.Kind())
+                var done = false;
+                for (var i = leadingTriviaList.Count - 1; !done && (i >= 0); i--)
                 {
-                case SyntaxKind.AwaitKeyword:
-                case SyntaxKind.CaseKeyword:
-                case SyntaxKind.CatchKeyword:
-                case SyntaxKind.FixedKeyword:
-                case SyntaxKind.ForKeyword:
-                case SyntaxKind.ForEachKeyword:
-                ////case SyntaxKind.FromKeyword: // ?
-                case SyntaxKind.GroupKeyword: // ?
-                case SyntaxKind.IfKeyword:
-                ////case SyntaxKind.IntoKeyword: // ?
-                ////case SyntaxKind.JoinKeyword: // ?
-                ////case SyntaxKind.LetKeyword: // ?
-                case SyntaxKind.LockKeyword:
-                case SyntaxKind.OrderByKeyword: // ?
-                case SyntaxKind.ReturnKeyword:
-                case SyntaxKind.SelectKeyword: // ?
-                ////case SyntaxKind.StackAllocKeyword: // ?
-                case SyntaxKind.SwitchKeyword:
-                case SyntaxKind.UsingKeyword:
-                case SyntaxKind.WhereKeyword: // ?
-                case SyntaxKind.WhileKeyword:
-                    allowLeadingNoSpace = false;
-                    allowLeadingSpace = true;
-                    // allow these to be reported as SA1000
-                    reportPrecedingError = false;
-                    break;
-
-                case SyntaxKind.CheckedKeyword:
-                case SyntaxKind.DefaultKeyword:
-                case SyntaxKind.NameOfKeyword:
-                case SyntaxKind.NewKeyword:
-                case SyntaxKind.SizeOfKeyword:
-                case SyntaxKind.TypeOfKeyword:
-                case SyntaxKind.UncheckedKeyword:
-                    allowLeadingNoSpace = true;
-                    allowLeadingSpace = false;
-                    // allow these to be reported as SA1000
-                    reportPrecedingError = false;
-                    break;
-
-                case SyntaxKind.EqualsGreaterThanToken: // lambda containing a cast
-                case SyntaxKind.CommaToken:
-                    allowLeadingNoSpace = false;
-                    allowLeadingSpace = true;
-                    break;
-
-                case SyntaxKind.IdentifierToken:
-                    if (precedingToken.Text == "nameof")
+                    switch (leadingTriviaList[i].Kind())
                     {
-                        if (precedingToken.Parent is IdentifierNameSyntax && precedingToken.Parent.Parent is InvocationExpressionSyntax)
-                        {
-                            // allow this to be reported as SA1000
-                            // TODO: this code should not ignore nameof(...) which is not actually a Name Of Expression
-                            goto case SyntaxKind.NameOfKeyword;
-                        }
-                    }
-
-                    goto default;
-
-                default:
-                    if (precedingToken.Parent is BinaryExpressionSyntax
-                        || precedingToken.Parent is AssignmentExpressionSyntax
-                        || precedingToken.Parent is ConditionalExpressionSyntax
-                        || precedingToken.Parent is EqualsValueClauseSyntax)
-                    {
-                        allowLeadingNoSpace = false;
-                        allowLeadingSpace = true;
+                    case SyntaxKind.WhitespaceTrivia:
                         break;
+
+                    case SyntaxKind.EndOfLineTrivia:
+                        isFirstOnLine = true;
+                        done = true;
+                        break;
+
+                    default:
+                        done = true;
+                        break;
+                    }
+                }
+            }
+
+            bool haveLeadingSpace;
+            bool partOfUnaryExpression;
+            bool startOfIndexer;
+
+            var prevTokenIsOpenParen = prevToken.IsKind(SyntaxKind.OpenParenToken);
+
+            switch (token.Parent.Kind())
+            {
+            case SyntaxKind.IfStatement:
+            case SyntaxKind.DoStatement:
+            case SyntaxKind.WhileStatement:
+            case SyntaxKind.ForStatement:
+            case SyntaxKind.ForEachStatement:
+            case SyntaxKind.SwitchStatement:
+            case SyntaxKind.FixedStatement:
+            case SyntaxKind.LockStatement:
+            case SyntaxKind.UsingStatement:
+            case SyntaxKind.CatchDeclaration:
+            case SyntaxKind.CatchFilterClause:
+                haveLeadingSpace = true;
+                break;
+
+            case SyntaxKind.ArgumentList:
+            case SyntaxKind.AttributeArgumentList:
+            case SyntaxKind.CheckedExpression:
+            case SyntaxKind.UncheckedExpression:
+            case SyntaxKind.ConstructorConstraint:
+            case SyntaxKind.DefaultExpression:
+            case SyntaxKind.SizeOfExpression:
+            case SyntaxKind.TypeOfExpression:
+            default:
+                haveLeadingSpace = false;
+                break;
+
+            case SyntaxKind.ParenthesizedExpression:
+                if (prevToken.Parent.IsKind(SyntaxKind.Interpolation))
+                {
+                    haveLeadingSpace = false;
+                    break;
+                }
+
+                partOfUnaryExpression = prevToken.Parent is PrefixUnaryExpressionSyntax;
+                startOfIndexer = prevToken.IsKind(SyntaxKind.OpenBracketToken);
+                var partOfCastExpression = prevToken.IsKind(SyntaxKind.CloseParenToken) && prevToken.Parent.IsKind(SyntaxKind.CastExpression);
+
+                haveLeadingSpace = !partOfUnaryExpression && !startOfIndexer && !partOfCastExpression;
+                break;
+
+            case SyntaxKind.CastExpression:
+                partOfUnaryExpression = prevToken.Parent is PrefixUnaryExpressionSyntax;
+                startOfIndexer = prevToken.IsKind(SyntaxKind.OpenBracketToken);
+                var consecutiveCast = prevToken.IsKind(SyntaxKind.CloseParenToken) && prevToken.Parent.IsKind(SyntaxKind.CastExpression);
+                var partOfInterpolation = prevToken.IsKind(SyntaxKind.OpenBraceToken) && prevToken.Parent.IsKind(SyntaxKind.Interpolation);
+
+                haveLeadingSpace = !partOfUnaryExpression && !startOfIndexer && !consecutiveCast && !partOfInterpolation;
+                break;
+
+            case SyntaxKind.ParameterList:
+                var partOfLambdaExpression = token.Parent.Parent.IsKind(SyntaxKind.ParenthesizedLambdaExpression);
+                haveLeadingSpace = partOfLambdaExpression;
+                break;
+            }
+
+            // Ignore spacing before if another opening parenthesis is before this.
+            // That way the first opening parenthesis will report any spacing errors.
+            if (!prevTokenIsOpenParen)
+            {
+                var hasLeadingComment = (leadingTriviaList.Count > 0) && leadingTriviaList.Last().IsKind(SyntaxKind.MultiLineCommentTrivia);
+                var hasLeadingSpace = (leadingTriviaList.Count > 0) && leadingTriviaList.Last().IsKind(SyntaxKind.WhitespaceTrivia);
+
+                if (!isFirstOnLine && !hasLeadingComment && (haveLeadingSpace != hasLeadingSpace))
+                {
+                    if (haveLeadingSpace)
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(DescriptorPreceded, token.GetLocation(), TokenSpacingProperties.InsertPreceding));
                     }
                     else
                     {
-                        allowLeadingNoSpace = true;
-                        allowLeadingSpace = false;
-                        break;
+                        context.ReportDiagnostic(Diagnostic.Create(DescriptorNotPreceded, token.GetLocation(), TokenSpacingProperties.RemovePreceding));
                     }
                 }
             }
 
-            followedBySpace = token.HasTrailingTrivia;
-            lastInLine = followedBySpace && token.TrailingTrivia.Any(SyntaxKind.EndOfLineTrivia);
-
-            if (reportPrecedingError && !firstInLine)
+            if (token.IsFollowedByWhitespace())
             {
-                if (!allowLeadingSpace && precededBySpace)
-                {
-                    // Opening parenthesis must{ not} be {preceded} by a space.
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), " not", "preceded"));
-                }
-                else if (!allowLeadingNoSpace && !precededBySpace)
-                {
-                    // Opening parenthesis must{} be {preceded} by a space.
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), string.Empty, "preceded"));
-                }
-            }
-
-            if (reportFollowingError && !lastInLine && followedBySpace)
-            {
-                // Opening parenthesis must{ not} be {followed} by a space.
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation(), " not", "followed"));
+                context.ReportDiagnostic(Diagnostic.Create(DescriptorNotFollowed, token.GetLocation(), TokenSpacingProperties.RemoveFollowing));
             }
         }
     }

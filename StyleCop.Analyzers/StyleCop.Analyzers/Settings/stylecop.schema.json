@@ -1,0 +1,129 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "id": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers/Settings/stylecop.schema.json",
+  "title": "StyleCop Analyzers Configuration",
+  "description": "Configuration file for StyleCop Analyzers",
+  "type": "object",
+  "properties": {
+    "settings": {
+      "type": "object",
+      "description": "The top-level object containing configuration properties for built-in rules.",
+      "additionalProperties": false,
+      "properties": {
+        "spacingRules": {
+          "type": "object",
+          "description": "Configuration for spacing rules (SA1000-)",
+          "additionalProperties": false,
+          "properties": {
+          }
+        },
+        "readabilityRules": {
+          "type": "object",
+          "description": "Configuration for readability rules (SA1100-)",
+          "additionalProperties": false,
+          "properties": {
+          }
+        },
+        "orderingRules": {
+          "type": "object",
+          "description": "Configuration for ordering rules (SA1200-)",
+          "additionalProperties": false,
+          "properties": {
+          }
+        },
+        "namingRules": {
+          "type": "object",
+          "description": "Configuration for naming rules (SA1300-)",
+          "additionalProperties": false,
+          "properties": {
+            "allowCommonHungarianPrefixes": {
+              "type": "boolean",
+              "description": "Determines whether common Hungarian notation prefixes should be allowed.",
+              "default": true
+            },
+            "allowedHungarianPrefixes": {
+              "type": "array",
+              "description": "Allowed Hungarian notation prefixes.",
+              "default": [ ],
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z]{1,2}$",
+                "uniqueItems": true
+              }
+            }
+          }
+        },
+        "maintainabilityRules": {
+          "type": "object",
+          "description": "Configuration for ordering rules (SA1400-)",
+          "additionalProperties": false,
+          "properties": {
+          }
+        },
+        "documentationRules": {
+          "type": "object",
+          "description": "Configuration for documentation rules (SA1600-)",
+          "additionalProperties": false,
+          "properties": {
+            "documentExposedElements": {
+              "type": "boolean",
+              "description": "Specifies whether exposed elements need to be documented. When true, all publicly-exposed types and members require documentation.",
+              "default": true
+            },
+            "documentInternalElements": {
+              "type": "boolean",
+              "description": "Specifies whether internal elements need to be documented. When true, all internally-exposed types and members require documentation.",
+              "default": true
+            },
+            "documentPrivateElements": {
+              "type": "boolean",
+              "description": "Specifies whether private elements need to be documented. When true, all types and members except for declared private fields require documentation.",
+              "default": false
+            },
+            "documentInterfaces": {
+              "type": "boolean",
+              "description": "Specifies whether interface members need to be documented. When true, all interface members require documentation, regardless of accessibility.",
+              "default": true
+            },
+            "documentPrivateFields": {
+              "type": "boolean",
+              "description": "Specifies whether private fields need to be documented. When true, all fields require documentation, regardless of accessibility.",
+              "default": false
+            },
+            "companyName": {
+              "type": "string",
+              "description": "The name of the company which appears in file headers.",
+              "default": "PlaceholderCompany"
+            },
+            "copyrightText": {
+              "type": "string",
+              "description": "The copyright text which should appear in file headers.",
+              "default": "Copyright (c) {companyName}. All rights reserved."
+            },
+            "variables": {
+              "type": "object",
+              "description": "Replacement variables which may be used in the 'copyrightText' value.",
+              "patternProperties": {
+                "^[a-zA-Z0-9]+$": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "xmlHeader": {
+              "type": "boolean",
+              "description": "Determines whether the file header should be wrapped in the StyleCop-standard XML structure.",
+              "default": true
+            },
+            "fileNamingConvention": {
+              "type": "string",
+              "description": "Specifies the preferred naming convention for files. The default value \"stylecop\" uses the naming convention defined by StyleCop Classic, while \"metadata\" uses a file naming convention that matches the metadata names of types.",
+              "default": "stylecop",
+              "enum": [ "stylecop", "metadata" ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

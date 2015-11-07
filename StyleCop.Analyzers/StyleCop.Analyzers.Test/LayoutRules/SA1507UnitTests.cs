@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.LayoutRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.CodeFixes;
@@ -53,23 +57,12 @@
 ";
 
         /// <summary>
-        /// Verifies that the analyzer will properly handle an empty source.
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        /// <summary>
         /// Verifies that empty lines at the start of the file do not trigger any diagnostics.
         /// (This will be handled by SA1517)
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestEmptyLinesAtStartOfFile()
+        public async Task TestEmptyLinesAtStartOfFileAsync()
         {
             var testCode = @"
 
@@ -77,7 +70,7 @@ public class Foo
 {
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -86,7 +79,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestEmptyLinesAtEndOfFile()
+        public async Task TestEmptyLinesAtEndOfFileAsync()
         {
             var testCode = @"public class Foo
 {
@@ -95,11 +88,11 @@ public class Foo
 
 ";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestOneEmptyLineBetweenMultilineCommentAndFirstElement()
+        public async Task TestOneEmptyLineBetweenMultilineCommentAndFirstElementAsync()
         {
             string testCode = @"/*
 */
@@ -109,11 +102,11 @@ namespace Microsoft
 }
 ";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestOneEmptyLineBetweenSingleLineCommentAndFirstElement()
+        public async Task TestOneEmptyLineBetweenSingleLineCommentAndFirstElementAsync()
         {
             string testCode = @"//
 
@@ -122,11 +115,11 @@ namespace Microsoft
 }
 ";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestMultipleEmptyLinesBetweenMultilineCommentAndFirstElement()
+        public async Task TestMultipleEmptyLinesBetweenMultilineCommentAndFirstElementAsync()
         {
             string testCode = @"/*
 */
@@ -142,7 +135,7 @@ namespace Microsoft
                 this.CSharpDiagnostic().WithLocation(3, 1),
             };
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expectedDiagnostics, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expectedDiagnostics, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -151,7 +144,7 @@ namespace Microsoft
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestVerbatimStringLiteral()
+        public async Task TestVerbatimStringLiteralAsync()
         {
             var testCode = @"public class Foo
 {
@@ -166,7 +159,7 @@ namespace Microsoft
 }
 ";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -174,7 +167,7 @@ namespace Microsoft
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestInvalidMultipleBlankLines()
+        public async Task TestInvalidMultipleBlankLinesAsync()
         {
             var expectedDiagnostics = new[]
             {
@@ -189,7 +182,7 @@ namespace Microsoft
                 this.CSharpDiagnostic().WithLocation(35, 1)
             };
 
-            await this.VerifyCSharpDiagnosticAsync(TestCode, expectedDiagnostics, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(TestCode, expectedDiagnostics, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -197,7 +190,7 @@ namespace Microsoft
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestInvalidMultipleBlankLinesCodeFix()
+        public async Task TestInvalidMultipleBlankLinesCodeFixAsync()
         {
             var fixedTestCode = @"namespace MyTest
 {
@@ -231,11 +224,11 @@ namespace Microsoft
 }
 ";
 
-            await this.VerifyCSharpFixAsync(TestCode, fixedTestCode);
+            await this.VerifyCSharpFixAsync(TestCode, fixedTestCode).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestValidBlankLineInVariousPlaces()
+        public async Task TestValidBlankLineInVariousPlacesAsync()
         {
             string testCode = @"using System;
 
@@ -254,13 +247,13 @@ class FooBar
 }
 ";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1507CodeMustNotContainMultipleBlankLinesInARow();
+            yield return new SA1507CodeMustNotContainMultipleBlankLinesInARow();
         }
 
         /// <inheritdoc/>

@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.Test.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.DocumentationRules
 {
     using System.Collections.Generic;
     using System.Threading;
@@ -11,10 +14,8 @@
     /// <summary>
     /// This class contains unit tests for <see cref="SA1611ElementParametersMustBeDocumented"/>.
     /// </summary>
-    public class SA1611UnitTests : CodeFixVerifier
+    public class SA1611UnitTests : DiagnosticVerifier
     {
-        public string DiagnosticId { get; } = SA1611ElementParametersMustBeDocumented.DiagnosticId;
-
         public static IEnumerable<object[]> Data
         {
             get
@@ -32,16 +33,9 @@
             }
         }
 
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
         [Theory]
         [MemberData(nameof(Data))]
-        public async Task TestWithAllDocumentation(string p)
+        public async Task TestWithAllDocumentationAsync(string p)
         {
             var testCode = @"
 /// <summary>
@@ -57,12 +51,12 @@ public class ClassName
     /// <param name=""param3"">Param 3</param>
     public ##
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Data))]
-        public async Task TestWithAllDocumentationAlternativeSyntax(string p)
+        public async Task TestWithAllDocumentationAlternativeSyntaxAsync(string p)
         {
             var testCode = @"
 /// <summary>
@@ -78,12 +72,12 @@ public class ClassName
     /// <param name=""p&#x61;ram3"">Param 3</param>
     public ##
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Data))]
-        public async Task TestWithAllDocumentationWrongOrder(string p)
+        public async Task TestWithAllDocumentationWrongOrderAsync(string p)
         {
             var testCode = @"
 /// <summary>
@@ -99,12 +93,12 @@ public class ClassName
     /// <param name=""param2""></param>
     public ##
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Data))]
-        public async Task TestWithNoDocumentation(string p)
+        public async Task TestWithNoDocumentationAsync(string p)
         {
             var testCode = @"
 /// <summary>
@@ -114,12 +108,12 @@ public class ClassName
 {
     public ##
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Data))]
-        public async Task TestInheritDoc(string p)
+        public async Task TestInheritDocAsync(string p)
         {
             var testCode = @"
 /// <summary>
@@ -130,12 +124,12 @@ public class ClassName
     /// <inheritdoc/>
     public ##
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
         [MemberData(nameof(Data))]
-        public async Task TestMissingParameters(string p)
+        public async Task TestMissingParametersAsync(string p)
         {
             var testCode = @"
 /// <summary>
@@ -148,19 +142,96 @@ public class ClassName
     /// </summary>
     public ##
 }";
-            var expected = new[]
+            DiagnosticResult[] expected =
             {
                 this.CSharpDiagnostic().WithLocation(10, 38).WithArguments("param1"),
                 this.CSharpDiagnostic().WithLocation(10, 53).WithArguments("param2"),
                 this.CSharpDiagnostic().WithLocation(10, 68).WithArguments("param3"),
             };
 
-            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode.Replace("##", p), expected, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        /// <summary>
+        /// Verifies that valid operator declarations will not produce diagnostics.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Fact]
+        public async Task VerifyValidOperatorDeclarationsAsync()
         {
-            return new SA1611ElementParametersMustBeDocumented();
+            var testCode = @"
+/// <summary>
+/// Test class
+/// </summary>
+public class TestClass
+{
+    /// <summary>
+    /// Foo
+    /// </summary>
+    /// <param name=""value"">The value to use.</param>
+    public static TestClass operator +(TestClass value)
+    {   
+        return value;
+    }
+
+    /// <summary>
+    /// Foo
+    /// </summary>
+    /// <param name=""value"">The value to use.</param>
+    public static explicit operator TestClass(int value)
+    {   
+        return new TestClass();
+    }
+}
+";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Verifies that invalid operator declarations will produce the expected diagnostics.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Fact]
+        public async Task VerifyInvalidOperatorDeclarationsAsync()
+        {
+            var testCode = @"
+/// <summary>
+/// Test class
+/// </summary>
+public class TestClass
+{
+    /// <summary>
+    /// Foo
+    /// </summary>
+    public static TestClass operator +(TestClass value)
+    {   
+        return value;
+    }
+
+    /// <summary>
+    /// Foo
+    /// </summary>
+    public static explicit operator TestClass(int value)
+    {   
+        return new TestClass();
+    }
+}
+";
+
+            DiagnosticResult[] expected =
+            {
+                this.CSharpDiagnostic().WithLocation(10, 50).WithArguments("value"),
+                this.CSharpDiagnostic().WithLocation(18, 51).WithArguments("value")
+            };
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1611ElementParametersMustBeDocumented();
         }
     }
 }

@@ -1,12 +1,15 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
-    using System.Collections.Generic;
+    using System;
     using System.Collections.Immutable;
-    using System.Linq;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// Within a C# property, indexer or event, at least one of the child accessors is written on a single line, and at
@@ -57,85 +60,74 @@
     /// </code>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1504AllAccessorsMustBeSingleLineOrMultiLine : DiagnosticAnalyzer
+    internal class SA1504AllAccessorsMustBeSingleLineOrMultiLine : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1504AllAccessorsMustBeSingleLineOrMultiLine"/> analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1504";
+
         private const string Title = "All accessors must be single-line or multi-line";
         private const string MessageFormat = "All accessors must be single-line or multi-line";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
         private const string Description = "Within a C# property, indexer or event, at least one of the child accessors is written on a single line, and at least one of the child accessors is written across multiple lines.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1504.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1504.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> AccessorListAction = HandleAccessorList;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandlePropertyDeclaration, SyntaxKind.PropertyDeclaration, SyntaxKind.IndexerDeclaration, SyntaxKind.EventDeclaration);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandlePropertyDeclaration(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
         {
-            var property = (BasePropertyDeclarationSyntax)context.Node;
+            context.RegisterSyntaxNodeActionHonorExclusions(AccessorListAction, SyntaxKind.AccessorList);
+        }
 
-            if (property.AccessorList == null
-                || property.AccessorList.IsMissing
-                || property.AccessorList.Accessors.Count < 2)
+        private static void HandleAccessorList(SyntaxNodeAnalysisContext context)
+        {
+            var accessorList = (AccessorListSyntax)context.Node;
+
+            if (accessorList.Accessors.Count < 2)
             {
                 return;
             }
 
-            var accessorsAnalyzeResult = this.AnalyzeAccessorsLineSpans(property.AccessorList.Accessors);
-            if (accessorsAnalyzeResult.SingleLineAccessors.Count == 1
-                && accessorsAnalyzeResult.MultiLineAccessors.Count == 1)
+            var hasSingleLineAccessor = false;
+            var hasMultipleLinesAccessor = false;
+
+            foreach (var accessor in accessorList.Accessors)
             {
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, accessorsAnalyzeResult.SingleLineAccessors.Single().Keyword.GetLocation()));
-            }
+                // never report when any accessor has no body.
+                if (accessor.Body == null)
+                {
+                    return;
+                }
 
-        }
-
-        private AccessorsAnalysisResult AnalyzeAccessorsLineSpans(IEnumerable<AccessorDeclarationSyntax> accessors)
-        {
-            var result = new AccessorsAnalysisResult();
-
-            foreach (var accessorDeclarationSyntax in accessors)
-            {
-                var fileLinePositionSpan = accessorDeclarationSyntax.GetLocation().GetLineSpan();
-
+                var fileLinePositionSpan = accessor.GetLineSpan();
                 if (fileLinePositionSpan.StartLinePosition.Line == fileLinePositionSpan.EndLinePosition.Line)
                 {
-                    result.SingleLineAccessors.Add(accessorDeclarationSyntax);
+                    hasSingleLineAccessor = true;
                 }
                 else
                 {
-                    result.MultiLineAccessors.Add(accessorDeclarationSyntax);
+                    hasMultipleLinesAccessor = true;
                 }
             }
 
-            return result;
-        }
-
-        private class AccessorsAnalysisResult
-        {
-            public List<AccessorDeclarationSyntax> MultiLineAccessors { get; } = new List<AccessorDeclarationSyntax>();
-
-            public List<AccessorDeclarationSyntax> SingleLineAccessors { get; } = new List<AccessorDeclarationSyntax>();
+            if (hasSingleLineAccessor && hasMultipleLinesAccessor)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(Descriptor, accessorList.Accessors.First().Keyword.GetLocation()));
+            }
         }
     }
 }

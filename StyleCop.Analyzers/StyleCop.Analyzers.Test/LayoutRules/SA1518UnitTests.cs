@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.LayoutRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.CodeFixes;
@@ -23,22 +27,11 @@ public class Foo
 }";
 
         /// <summary>
-        /// Verifies that the analyzer will properly handle an empty source.
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Verifies that blank lines at the end of the file will produce a warning.
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestWithBlankLinesAtEndOfFile()
+        public async Task TestWithBlankLinesAtEndOfFileAsync()
         {
             var testCode = BaseCode + "\r\n\r\n";
             await this.VerifyCSharpDiagnosticAsync(testCode, this.GenerateExpectedWarning(9, 1), CancellationToken.None).ConfigureAwait(false);
@@ -49,7 +42,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestWithLineFeedOnlyBlankLinesAtEndOfFile()
+        public async Task TestWithLineFeedOnlyBlankLinesAtEndOfFileAsync()
         {
             var testCode = BaseCode + "\n\n";
             await this.VerifyCSharpDiagnosticAsync(testCode, this.GenerateExpectedWarning(9, 1), CancellationToken.None).ConfigureAwait(false);
@@ -60,7 +53,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestWithSingleCarriageReturnLineFeedAtEndOfFile()
+        public async Task TestWithSingleCarriageReturnLineFeedAtEndOfFileAsync()
         {
             var testCode = BaseCode + "\r\n";
             await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
@@ -71,7 +64,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestWithSingleLineFeedAtEndOfFile()
+        public async Task TestWithSingleLineFeedAtEndOfFileAsync()
         {
             var testCode = BaseCode + "\n";
             await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
@@ -82,7 +75,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestWithoutCarriageReturnLineFeedAtEndOfFile()
+        public async Task TestWithoutCarriageReturnLineFeedAtEndOfFileAsync()
         {
             await this.VerifyCSharpDiagnosticAsync(BaseCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
@@ -92,7 +85,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestFileEndsWithSpaces()
+        public async Task TestFileEndsWithSpacesAsync()
         {
             var testCode = BaseCode + "\r\n          ";
             await this.VerifyCSharpDiagnosticAsync(testCode, this.GenerateExpectedWarning(9, 1), CancellationToken.None).ConfigureAwait(false);
@@ -103,7 +96,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestFileEndingWithComment()
+        public async Task TestFileEndingWithCommentAsync()
         {
             var testCode = BaseCode + "\r\n// Test comment";
             await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
@@ -114,7 +107,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestFileEndingWithCommentAndSpuriousWhitespace()
+        public async Task TestFileEndingWithCommentAndSpuriousWhitespaceAsync()
         {
             var testCode = BaseCode + "\r\n// Test comment\r\n   \r\n";
             await this.VerifyCSharpDiagnosticAsync(testCode, this.GenerateExpectedWarning(10, 1), CancellationToken.None).ConfigureAwait(false);
@@ -125,7 +118,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestFileEndingWithEndIf()
+        public async Task TestFileEndingWithEndIfAsync()
         {
             var testCode = "#if true\r\n" + BaseCode + "\r\n#endif\r\n";
             await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
@@ -136,7 +129,7 @@ public class Foo
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestFileEndingWithEndIfWithSpuriousWhitespace()
+        public async Task TestFileEndingWithEndIfWithSpuriousWhitespaceAsync()
         {
             var testCode = "#if true\r\n" + BaseCode + "\r\n#endif\r\n   \r\n";
             await this.VerifyCSharpDiagnosticAsync(testCode, this.GenerateExpectedWarning(11, 1), CancellationToken.None).ConfigureAwait(false);
@@ -148,7 +141,7 @@ public class Foo
         /// <remarks>The CRLF after the last curly bracket will not be stripped!</remarks>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixProviderStripsTrailingBlankLines()
+        public async Task TestCodeFixProviderStripsTrailingBlankLinesAsync()
         {
             var testCode = BaseCode + "\r\n\r\n";
             var fixedTestCode = BaseCode + "\r\n";
@@ -162,7 +155,7 @@ public class Foo
         /// <remarks>The CRLF after the last curly bracket will not be stripped!</remarks>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixProviderStripsTrailingBlankLinesIncludingWhitespace()
+        public async Task TestCodeFixProviderStripsTrailingBlankLinesIncludingWhitespaceAsync()
         {
             var testCode = BaseCode + "\r\n   \r\n   \r\n";
             var fixedTestCode = BaseCode + "\r\n";
@@ -176,7 +169,7 @@ public class Foo
         /// <remarks>The LF after the last curly bracket will not be stripped!</remarks>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixProviderStripsTrailingLinefeedOnlyBlankLinesIncludingWhitespace()
+        public async Task TestCodeFixProviderStripsTrailingLinefeedOnlyBlankLinesIncludingWhitespaceAsync()
         {
             var testCode = BaseCode + "\n   \n   \n";
             var fixedTestCode = BaseCode + "\n";
@@ -190,7 +183,7 @@ public class Foo
         /// <remarks>The CRLF after the #endif will not be stripped!</remarks>
         /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
         [Fact]
-        public async Task TestCodeFixProviderOnlyStripsTrailingBlankLines()
+        public async Task TestCodeFixProviderOnlyStripsTrailingBlankLinesAsync()
         {
             var testCode = "#if true\r\n" + BaseCode + "\r\n#endif\r\n   \r\n";
             var fixedTestCode = "#if true\r\n" + BaseCode + "\r\n#endif\r\n";
@@ -199,9 +192,9 @@ public class Foo
         }
 
         /// <inheritdoc/>
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1518CodeMustNotContainBlankLinesAtEndOfFile();
+            yield return new SA1518CodeMustNotContainBlankLinesAtEndOfFile();
         }
 
         /// <inheritdoc/>

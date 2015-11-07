@@ -1,6 +1,10 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
     using System.Collections.Immutable;
+    using System.Diagnostics.CodeAnalysis;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -30,7 +34,8 @@
     /// loaded.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1645IncludedDocumentationFileDoesNotExist : DiagnosticAnalyzer
+    [NoDiagnostic("This is already handled by the compiler with warning CS1589.")]
+    internal class SA1645IncludedDocumentationFileDoesNotExist : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1645IncludedDocumentationFileDoesNotExist"/> analyzer.
@@ -38,29 +43,21 @@
         public const string DiagnosticId = "SA1645";
         private const string Title = "Included documentation file does not exist";
         private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "An included XML documentation file does not exist.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1645.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1645.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledByDefault, Description, HelpLink, WellKnownDiagnosticTags.NotConfigurable);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
+        /// <inheritdoc/>
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
             ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
-
-        /// <inheritdoc/>
+        [ExcludeFromCodeCoverage]
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Implement analysis
+            // This diagnostic is not implemented (by design) in StyleCopAnalyzers.
         }
     }
 }

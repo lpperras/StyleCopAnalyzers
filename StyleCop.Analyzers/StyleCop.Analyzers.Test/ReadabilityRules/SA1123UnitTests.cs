@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.ReadabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.ReadabilityRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Analyzers.ReadabilityRules;
@@ -15,14 +19,7 @@
     public class SA1123UnitTests : CodeFixVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
-        }
-
-        [Fact]
-        public async Task TestRegionInMethod()
+        public async Task TestRegionInMethodAsync()
         {
             var testCode = @"public class Foo
 {
@@ -36,7 +33,7 @@
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(5, 1);
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
 
             string fixedCode = @"public class Foo
 {
@@ -46,11 +43,12 @@
     }
 }";
 
-            await this.VerifyCSharpFixAsync(testCode, fixedCode);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode).ConfigureAwait(false);
+            await this.VerifyCSharpFixAllFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestRegionPartialyInMethod()
+        public async Task TestRegionPartialyInMethodAsync()
         {
             var testCode = @"public class Foo
 {
@@ -62,11 +60,11 @@
 #endregion
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestRegionPartialyInMethod2()
+        public async Task TestRegionPartialyInMethod2Async()
         {
             var testCode = @"public class Foo
 {
@@ -77,11 +75,11 @@
     }
 #endregion
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestRegionPartialyMultipleMethods()
+        public async Task TestRegionPartialyMultipleMethodsAsync()
         {
             var testCode = @"public class Foo
 {
@@ -96,11 +94,11 @@
 #endregion
     }
 }";
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestEndRegionInMethod()
+        public async Task TestEndRegionInMethodAsync()
         {
             var testCode = @"public class Foo
 {
@@ -112,11 +110,11 @@
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestRegionOutsideMethod()
+        public async Task TestRegionOutsideMethodAsync()
         {
             var testCode = @"public class Foo
 {
@@ -128,11 +126,11 @@
     }
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Fact]
-        public async Task TestRegionOutsideMethod2()
+        public async Task TestRegionOutsideMethod2Async()
         {
             var testCode = @"public class Foo
 {
@@ -144,12 +142,50 @@
 #endregion
 }";
 
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        [Fact]
+        public async Task TestFixAllProviderAsync()
         {
-            return new SA1123DoNotPlaceRegionsWithinElements();
+            string testCode = @"
+class ClassName
+{
+    void MethodName()
+    {
+        #region Foo
+        #region Foo
+        #region Foo
+        #endregion
+        #endregion
+        #endregion
+        #region Foo
+        #region Foo
+        #region Foo
+        // Test
+        #endregion
+        #endregion
+        #endregion
+    }
+}
+";
+
+            string fixedCode = @"
+class ClassName
+{
+    void MethodName()
+    {
+        // Test
+    }
+}
+";
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAllFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+        }
+
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1123DoNotPlaceRegionsWithinElements();
         }
 
         protected override CodeFixProvider GetCSharpCodeFixProvider()

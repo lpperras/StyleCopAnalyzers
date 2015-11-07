@@ -1,7 +1,10 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
     using System.Collections.Immutable;
-    using System.Linq;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.Diagnostics;
@@ -11,45 +14,44 @@
     /// </summary>
     /// <remarks>
     /// <para>A violation of this rule occurs whenever the code contains multiple whitespace characters in a row, unless
-    /// the characters come at the beginning or end of a line of code, following a comma or semicolon or preceeding a
+    /// the characters come at the beginning or end of a line of code, following a comma or semicolon or preceding a
     /// symbol.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1025CodeMustNotContainMultipleWhitespaceInARow : DiagnosticAnalyzer
+    internal class SA1025CodeMustNotContainMultipleWhitespaceInARow : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1025CodeMustNotContainMultipleWhitespaceInARow"/>
         /// analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1025";
-        private const string Title = "Code must not contain multiple whitespace in a row";
-        private const string MessageFormat = "Code must not contain multiple whitespace characters in a row.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
-        private const string Description = "The code contains multiple whitespace characters in a row.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1025.html";
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(SpacingResources.SA1025Title), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(SpacingResources.SA1025MessageFormat), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(SpacingResources.SA1025Description), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1025.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
             foreach (var trivia in root.DescendantTrivia())
@@ -57,7 +59,7 @@
                 switch (trivia.Kind())
                 {
                 case SyntaxKind.WhitespaceTrivia:
-                    this.HandleWhitespaceTrivia(context, trivia);
+                    HandleWhitespaceTrivia(context, trivia);
                     break;
 
                 default:
@@ -66,14 +68,14 @@
             }
         }
 
-        private void HandleWhitespaceTrivia(SyntaxTreeAnalysisContext context, SyntaxTrivia trivia)
+        private static void HandleWhitespaceTrivia(SyntaxTreeAnalysisContext context, SyntaxTrivia trivia)
         {
             if (trivia.Span.Length <= 1)
             {
                 return;
             }
 
-            if (trivia.GetLocation()?.GetMappedLineSpan().StartLinePosition.Character == 0)
+            if (trivia.SyntaxTree.GetMappedLineSpan(trivia.Span).StartLinePosition.Character == 0)
             {
                 return;
             }
@@ -81,15 +83,21 @@
             SyntaxToken token = trivia.Token;
             SyntaxToken precedingToken;
             SyntaxToken followingToken;
-            if (token.LeadingTrivia.Contains(trivia))
+
+            int index;
+            SyntaxTriviaList list;
+
+            if ((index = token.LeadingTrivia.IndexOf(trivia)) >= 0)
             {
                 precedingToken = token.GetPreviousToken();
                 followingToken = token;
+                list = token.LeadingTrivia;
             }
-            else if (token.TrailingTrivia.Contains(trivia))
+            else if ((index = token.TrailingTrivia.IndexOf(trivia)) >= 0)
             {
                 precedingToken = token;
                 followingToken = precedingToken.GetNextToken();
+                list = token.TrailingTrivia;
             }
             else
             {
@@ -97,7 +105,12 @@
                 return;
             }
 
-            if (precedingToken.IsKind(SyntaxKind.CommaToken) || precedingToken.IsKind(SyntaxKind.SemicolonToken))
+            var followingTrivia = index + 1 < list.Count ? list[index + 1] : default(SyntaxTrivia);
+
+            if (precedingToken.IsKind(SyntaxKind.CommaToken)
+                || precedingToken.IsKind(SyntaxKind.SemicolonToken)
+                || followingTrivia.IsKind(SyntaxKind.EndOfLineTrivia)
+                || followingToken.IsKind(SyntaxKind.EndOfFileToken))
             {
                 return;
             }

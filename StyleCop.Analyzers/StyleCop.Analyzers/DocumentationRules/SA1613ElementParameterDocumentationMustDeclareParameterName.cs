@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
+    using System;
     using System.Collections.Immutable;
     using Helpers;
     using Microsoft.CodeAnalysis;
@@ -22,7 +26,7 @@
     /// which is missing a <c>name</c> attribute, or which contains an empty <c>name</c> attribute.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1613ElementParameterDocumentationMustDeclareParameterName : DiagnosticAnalyzer
+    internal class SA1613ElementParameterDocumentationMustDeclareParameterName : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the
@@ -31,33 +35,33 @@
         public const string DiagnosticId = "SA1613";
         private const string Title = "Element parameter documentation must declare parameter name";
         private const string MessageFormat = "Element parameter documentation must declare parameter name";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "A <param> tag within a C# element's documentation header is missing a name attribute containing the name of the parameter.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1613.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1613.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> XmlElementAction = HandleXmlElement;
+        private static readonly Action<SyntaxNodeAnalysisContext> XmlEmptyElementAction = HandleXmlEmptyElement;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleXmlElement, SyntaxKind.XmlElement);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleXmlEmptyElement, SyntaxKind.XmlEmptyElement);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleXmlElement(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(XmlElementAction, SyntaxKind.XmlElement);
+            context.RegisterSyntaxNodeActionHonorExclusions(XmlEmptyElementAction, SyntaxKind.XmlEmptyElement);
+        }
+
+        private static void HandleXmlElement(SyntaxNodeAnalysisContext context)
         {
             XmlElementSyntax emptyElement = context.Node as XmlElementSyntax;
 
@@ -66,7 +70,7 @@
             HandleElement(context, emptyElement, name, emptyElement?.StartTag?.GetLocation());
         }
 
-        private void HandleXmlEmptyElement(SyntaxNodeAnalysisContext context)
+        private static void HandleXmlEmptyElement(SyntaxNodeAnalysisContext context)
         {
             XmlEmptyElementSyntax emptyElement = context.Node as XmlEmptyElementSyntax;
 
@@ -77,7 +81,7 @@
 
         private static void HandleElement(SyntaxNodeAnalysisContext context, XmlNodeSyntax element, XmlNameSyntax name, Location alternativeDiagnosticLocation)
         {
-            if (string.Equals(name.ToString(), XmlCommentHelper.ParamTag))
+            if (string.Equals(name.ToString(), XmlCommentHelper.ParamXmlTag))
             {
                 var nameAttribute = XmlCommentHelper.GetFirstAttributeOrDefault<XmlNameAttributeSyntax>(element);
 

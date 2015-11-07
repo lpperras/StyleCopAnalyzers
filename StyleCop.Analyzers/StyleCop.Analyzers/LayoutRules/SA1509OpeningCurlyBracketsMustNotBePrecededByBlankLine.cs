@@ -1,10 +1,15 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
+    using System;
     using System.Collections.Immutable;
     using System.Linq;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// An opening curly bracket within a C# element, statement, or expression is preceded by a blank line.
@@ -33,7 +38,7 @@
     /// curly brackets are preceded by blank lines.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1509OpeningCurlyBracketsMustNotBePrecededByBlankLine : DiagnosticAnalyzer
+    internal class SA1509OpeningCurlyBracketsMustNotBePrecededByBlankLine : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1509OpeningCurlyBracketsMustNotBePrecededByBlankLine"/>
@@ -42,81 +47,77 @@
         public const string DiagnosticId = "SA1509";
         private const string Title = "Opening curly brackets must not be preceded by blank line";
         private const string MessageFormat = "Opening curly brackets must not be preceded by blank line.";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
         private const string Description = "An opening curly bracket within a C# element, statement, or expression is preceded by a blank line.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1509.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1509.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.AnalyzeSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private async void AnalyzeSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
         {
-            var root = await context.Tree.GetRootAsync().ConfigureAwait(false);
-            var openCurlyBraces = root.DescendantTokens()
-                                      .Where(t => t.IsKind(SyntaxKind.OpenBraceToken))
-                                      .ToList();
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
 
-            foreach (var brace in openCurlyBraces)
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        {
+            var syntaxRoot = context.Tree.GetRoot(context.CancellationToken);
+
+            var openBraces = syntaxRoot.DescendantTokens()
+                .Where(t => t.IsKind(SyntaxKind.OpenBraceToken));
+
+            foreach (var openBrace in openBraces)
             {
-                var isPreviousLineEmpty = this.IsPreviousLineEmpty(brace);
-                if (isPreviousLineEmpty.HasValue &&
-                    isPreviousLineEmpty.Value)
+                AnalyzeOpenBrace(context, openBrace);
+            }
+        }
+
+        private static void AnalyzeOpenBrace(SyntaxTreeAnalysisContext context, SyntaxToken openBrace)
+        {
+            var prevToken = openBrace.GetPreviousToken();
+            var triviaList = TriviaHelper.MergeTriviaLists(prevToken.TrailingTrivia, openBrace.LeadingTrivia);
+
+            var done = false;
+            var eolCount = 0;
+            for (var i = triviaList.Count - 1; !done && (i >= 0); i--)
+            {
+                switch (triviaList[i].Kind())
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, brace.GetLocation()));
+                case SyntaxKind.WhitespaceTrivia:
+                    break;
+                case SyntaxKind.EndOfLineTrivia:
+                    eolCount++;
+                    break;
+                default:
+                    if (triviaList[i].IsDirective)
+                    {
+                        // These have a built-in end of line
+                        eolCount++;
+                    }
+
+                    done = true;
+                    break;
                 }
             }
-        }
 
-        private bool? IsPreviousLineEmpty(SyntaxToken token)
-        {
-            var fileLinePositionSpan = token.GetLocation().GetLineSpan();
-            if (!fileLinePositionSpan.IsValid)
+            if (eolCount < 2)
             {
-                return null;
+                return;
             }
 
-            var startLine = fileLinePositionSpan.StartLinePosition.Line;
-            var previousToken = token.GetPreviousToken();
-            if (previousToken.IsMissing)
-            {
-                return false;
-            }
-
-            var endLineOfPreviousToken = previousToken.GetLocation().GetLineSpan().EndLinePosition.Line;
-            var blankLinesBetweenTokens = startLine - endLineOfPreviousToken;
-            if (blankLinesBetweenTokens <= 1)
-            {
-                return false;
-            }
-
-            return !CheckIfPreviousLineHasComment(startLine - 1, token);
-        }
-
-        private static bool CheckIfPreviousLineHasComment(int previousLine, SyntaxToken token)
-        {
-            return token.LeadingTrivia
-                .Where(t => t.IsKind(SyntaxKind.MultiLineCommentTrivia) || t.IsKind(SyntaxKind.SingleLineCommentTrivia))
-                .Select(t => t.GetLocation().GetLineSpan())
-                .Where(t => t.IsValid)
-                .Any(l => l.StartLinePosition.Line == previousLine || l.EndLinePosition.Line == previousLine);
+            context.ReportDiagnostic(Diagnostic.Create(Descriptor, openBrace.GetLocation()));
         }
     }
 }

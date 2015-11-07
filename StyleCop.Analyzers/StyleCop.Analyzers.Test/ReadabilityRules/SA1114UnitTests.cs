@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.ReadabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.ReadabilityRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.Diagnostics;
@@ -7,17 +11,10 @@
     using TestHelper;
     using Xunit;
 
-    public class SA1114UnitTests : CodeFixVerifier
+    public class SA1114UnitTests : DiagnosticVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestMethodDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestMethodDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -36,7 +33,7 @@ string s)
         }
 
         [Fact]
-        public async Task TestMethodDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestMethodDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -52,7 +49,7 @@ string s)
         }
 
         [Fact]
-        public async Task TestMethodDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestMethodDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -67,7 +64,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMethodDeclarationNoParameters()
+        public async Task TestMethodDeclarationNoParametersAsync()
         {
             var testCode = @"
 class Foo
@@ -84,7 +81,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMethodCallParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestMethodCallParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -103,7 +100,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMethodCallParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestMethodCallParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -119,7 +116,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMethodCallParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestMethodCallParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -134,7 +131,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMethodCallNoParameters()
+        public async Task TestMethodCallNoParametersAsync()
         {
             var testCode = @"
 class Foo
@@ -151,7 +148,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestConstructorDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestConstructorDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -170,7 +167,7 @@ string s)
         }
 
         [Fact]
-        public async Task TestConstructorDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestConstructorDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -186,7 +183,7 @@ string s)
         }
 
         [Fact]
-        public async Task TestConstructorDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestConstructorDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -201,7 +198,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestConstructorDeclarationNoParameters()
+        public async Task TestConstructorDeclarationNoParametersAsync()
         {
             var testCode = @"
 class Foo
@@ -215,7 +212,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestConstructorCallParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestConstructorCallParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -238,7 +235,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestConstructorallParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestConstructorallParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -258,7 +255,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestConstructorCallParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestConstructorCallParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -277,7 +274,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestConstructorCallNoParameters()
+        public async Task TestConstructorCallNoParametersAsync()
         {
             var testCode = @"
 public class Foo
@@ -294,7 +291,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestIndexerDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestIndexerDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -316,7 +313,7 @@ int i]
         }
 
         [Fact]
-        public async Task TestIndexerDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestIndexerDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -335,7 +332,7 @@ int i]
         }
 
         [Fact]
-        public async Task TestIndexerDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestIndexerDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -353,7 +350,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestArrayDeclarationSizes2LinesAfterOpeningParenthesis()
+        public async Task TestArrayDeclarationSizes2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -372,7 +369,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestMultidimensionalArrayDeclarationSizes2LinesAfterOpeningParenthesis()
+        public async Task TestMultidimensionalArrayDeclarationSizes2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -405,7 +402,7 @@ var a = new int[
         }
 
         [Fact]
-        public async Task TestArrayDeclarationSizesOnNextLineAsOpeningParenthesis()
+        public async Task TestArrayDeclarationSizesOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -421,7 +418,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestArrayDeclarationSizesOnSameLineAsOpeningParenthesis()
+        public async Task TestArrayDeclarationSizesOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -436,7 +433,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestIndexerCallParameters2LinesAfterOpeningBracket()
+        public async Task TestIndexerCallParameters2LinesAfterOpeningBracketAsync()
         {
             var testCode = @"
 class Foo
@@ -456,7 +453,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestIndexerCallParametersOnNextLineAsOpeningBracket()
+        public async Task TestIndexerCallParametersOnNextLineAsOpeningBracketAsync()
         {
             var testCode = @"
 class Foo
@@ -473,7 +470,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestIndexerCallParametersOnSameLineAsOpeningBracket()
+        public async Task TestIndexerCallParametersOnSameLineAsOpeningBracketAsync()
         {
             var testCode = @"
 class Foo
@@ -489,7 +486,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestArrayCallParameters2LinesAfterOpeningBracket()
+        public async Task TestArrayCallParameters2LinesAfterOpeningBracketAsync()
         {
             var testCode = @"
 class Foo
@@ -520,7 +517,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestArrayCallParametersOnNextLineAsOpeningBracket()
+        public async Task TestArrayCallParametersOnNextLineAsOpeningBracketAsync()
         {
             var testCode = @"
 class Foo
@@ -543,7 +540,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestArrayCallParametersOnSameLineAsOpeningBracket()
+        public async Task TestArrayCallParametersOnSameLineAsOpeningBracketAsync()
         {
             var testCode = @"
 class Foo
@@ -564,7 +561,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAttributeParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestAttributeParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 using System.Diagnostics;
@@ -584,7 +581,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAttributeParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestAttributeParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 using System.Diagnostics;
@@ -601,7 +598,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAtributeParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestAtributeParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 using System.Diagnostics;
@@ -617,7 +614,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAttributeNoParameters()
+        public async Task TestAttributeNoParametersAsync()
         {
             var testCode = @"
 [System.Serializable]
@@ -630,7 +627,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAttributesListParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestAttributesListParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 using System.Diagnostics;
@@ -650,7 +647,7 @@ Conditional(""DEBUG""),Conditional(""DEBUG2"")]
         }
 
         [Fact]
-        public async Task TestAttributesListParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestAttributesListParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 using System.Diagnostics;
@@ -667,7 +664,7 @@ Conditional(""DEBUG""),Conditional(""DEBUG2"")]
         }
 
         [Fact]
-        public async Task TestAtributesListParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestAtributesListParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 using System.Diagnostics;
@@ -683,7 +680,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestDelegateDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestDelegateDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -699,7 +696,7 @@ string s);
         }
 
         [Fact]
-        public async Task TestDelegateDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestDelegateDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -712,7 +709,7 @@ string s);
         }
 
         [Fact]
-        public async Task TestDelegateDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestDelegateDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -724,7 +721,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestDelegateDeclarationNoParameters()
+        public async Task TestDelegateDeclarationNoParametersAsync()
         {
             var testCode = @"
 class Foo
@@ -736,7 +733,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAnonymousMethodDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestAnonymousMethodDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -758,7 +755,7 @@ int z, int j)
         }
 
         [Fact]
-        public async Task TestAnonymousMethodDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestAnonymousMethodDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -777,7 +774,7 @@ int z, int j)
         }
 
         [Fact]
-        public async Task TestAnonymousMethodDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestAnonymousMethodDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -795,7 +792,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAnonymousMethodDeclarationNoParameters()
+        public async Task TestAnonymousMethodDeclarationNoParametersAsync()
         {
             var testCode = @"
 class Foo
@@ -813,7 +810,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestAnonymousMethodDeclarationNoOpeningParenthesis()
+        public async Task TestAnonymousMethodDeclarationNoOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -831,7 +828,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestLambdaExpressionDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestLambdaExpressionDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -853,7 +850,7 @@ z,j) =>
         }
 
         [Fact]
-        public async Task TestLambdaExpressionDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestLambdaExpressionDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -872,7 +869,7 @@ z,j) =>
         }
 
         [Fact]
-        public async Task TestLambdaExpressionDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestLambdaExpressionDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 class Foo
@@ -890,7 +887,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestLambdaExpressionDeclarationNoParameters()
+        public async Task TestLambdaExpressionDeclarationNoParametersAsync()
         {
             var testCode = @"
 class Foo
@@ -908,7 +905,7 @@ class Foo
         }
 
         [Fact]
-        public async Task TestCastOperatorDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestCastOperatorDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -927,7 +924,7 @@ int i)
         }
 
         [Fact]
-        public async Task TestCastOperatorDeclarationDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestCastOperatorDeclarationDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -943,7 +940,7 @@ int i)
         }
 
         [Fact]
-        public async Task TestCastOperatorDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestCastOperatorDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -958,7 +955,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestOperatorOverloadDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestOperatorOverloadDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -977,7 +974,7 @@ Foo a, Foo b)
         }
 
         [Fact]
-        public async Task TestUnaryOperatorOverloadDeclarationParametersList2LinesAfterOpeningParenthesis()
+        public async Task TestUnaryOperatorOverloadDeclarationParametersList2LinesAfterOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -996,7 +993,7 @@ Foo a)
         }
 
         [Fact]
-        public async Task TestOperatorOverloadDeclarationParametersListOnNextLineAsOpeningParenthesis()
+        public async Task TestOperatorOverloadDeclarationParametersListOnNextLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -1012,7 +1009,7 @@ Foo a, Foo b)
         }
 
         [Fact]
-        public async Task TestOperatorOverloadDeclarationParametersListOnSameLineAsOpeningParenthesis()
+        public async Task TestOperatorOverloadDeclarationParametersListOnSameLineAsOpeningParenthesisAsync()
         {
             var testCode = @"
 public class Foo
@@ -1027,7 +1024,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestObjectCreationNoArgumentList()
+        public async Task TestObjectCreationNoArgumentListAsync()
         {
             var testCode = @"
 public class Foo
@@ -1041,9 +1038,67 @@ public class Foo
             await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        [Fact]
+        public async Task TestPragmaDirectivesAsync()
         {
-            return new SA1114ParameterListMustFollowDeclaration();
+            var testCode = @"using System;
+
+public class SomeOtherClass
+{
+    private void SomeMethod()
+    {
+        this.SomeOtherMethod(
+#pragma warning disable 618
+                this.SomeObsoleteMethod());
+#pragma warning restore 618
+    }
+
+    [Obsolete(""Don't use me!"")]
+    private int SomeObsoleteMethod()
+    {
+        return 0;
+    }
+
+    private void SomeOtherMethod(int someParameter)
+    {
+    }
+}";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Verifies that directive trivia will not result in diagnostics.
+        /// This is a regression test for #1623
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+        [Fact]
+        public async Task TestWithDirectiveTriviaAsync()
+        {
+            var testCode = @"
+public interface ITestInterface1 { }
+
+public interface ITestInterface2 { }
+
+public class TestClass
+{
+    public void TestMethod(
+#if TESTSYMBOL
+        ITestInterface1 instance)
+#else
+        ITestInterface2 instance)
+#endif
+    {
+    }
+}
+";
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1114ParameterListMustFollowDeclaration();
         }
     }
 }

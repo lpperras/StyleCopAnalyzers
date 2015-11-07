@@ -1,24 +1,21 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.Diagnostics;
-using StyleCop.Analyzers.MaintainabilityRules;
-using TestHelper;
-using Xunit;
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace StyleCop.Analyzers.Test.MaintainabilityRules
 {
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.CodeAnalysis.CodeFixes;
+    using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.MaintainabilityRules;
+    using TestHelper;
+    using Xunit;
+
     public class SA1408UnitTests : CodeFixVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestOr()
+        public async Task TestOrAsync()
         {
             var testCode = @"public class Foo
 {
@@ -31,7 +28,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestAnd()
+        public async Task TestAndAsync()
         {
             var testCode = @"public class Foo
 {
@@ -44,7 +41,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestOrAndAnd()
+        public async Task TestOrAndAndAsync()
         {
             var testCode = @"public class Foo
 {
@@ -69,7 +66,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestAndAndOr()
+        public async Task TestAndAndOrAsync()
         {
             var testCode = @"public class Foo
 {
@@ -94,7 +91,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestOrAndAndParenthesized()
+        public async Task TestOrAndAndParenthesizedAsync()
         {
             var testCode = @"public class Foo
 {
@@ -107,7 +104,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestOrAndEqualsParenthesized()
+        public async Task TestOrAndEqualsParenthesizedAsync()
         {
             var testCode = @"public class Foo
 {
@@ -120,7 +117,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestAndAndEquals()
+        public async Task TestAndAndEqualsAsync()
         {
             var testCode = @"public class Foo
 {
@@ -134,7 +131,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestAndAndOrParenthesized()
+        public async Task TestAndAndOrParenthesizedAsync()
         {
             var testCode = @"public class Foo
 {
@@ -147,7 +144,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestMultipleViolations()
+        public async Task TestMultipleViolationsAsync()
         {
             var testCode = @"public class Foo
 {
@@ -176,7 +173,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestCodeFix()
+        public async Task TestCodeFixAsync()
         {
             var testCode = @"public class Foo
 {
@@ -214,9 +211,9 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
             await this.VerifyCSharpFixAsync(testCode, fixedCode).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1408ConditionalExpressionsMustDeclarePrecedence();
+            yield return new SA1408ConditionalExpressionsMustDeclarePrecedence();
         }
 
         protected override CodeFixProvider GetCSharpCodeFixProvider()

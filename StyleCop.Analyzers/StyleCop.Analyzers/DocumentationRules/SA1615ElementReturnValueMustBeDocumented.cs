@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -21,7 +25,7 @@
     /// <c>&lt;returns&gt;</c> tag.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1615ElementReturnValueMustBeDocumented : DiagnosticAnalyzer
+    internal class SA1615ElementReturnValueMustBeDocumented : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1615ElementReturnValueMustBeDocumented"/> analyzer.
@@ -29,47 +33,47 @@
         public const string DiagnosticId = "SA1615";
         private const string Title = "Element return value must be documented";
         private const string MessageFormat = "Element return value must be documented";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "A C# element is missing documentation for its return value.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1615.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1615.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> MethodDeclarationAction = HandleMethodDeclaration;
+        private static readonly Action<SyntaxNodeAnalysisContext> DelegateDeclarationAction = HandleDelegateDeclaration;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleMethodDeclaration, SyntaxKind.MethodDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleDelegateDeclaration, SyntaxKind.DelegateDeclaration);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleMethodDeclaration(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
         {
-            var node = context.Node as MethodDeclarationSyntax;
-
-            this.HandleDeclaration(context, node.ReturnType);
+            context.RegisterSyntaxNodeActionHonorExclusions(MethodDeclarationAction, SyntaxKind.MethodDeclaration);
+            context.RegisterSyntaxNodeActionHonorExclusions(DelegateDeclarationAction, SyntaxKind.DelegateDeclaration);
         }
 
-        private void HandleDelegateDeclaration(SyntaxNodeAnalysisContext context)
+        private static void HandleMethodDeclaration(SyntaxNodeAnalysisContext context)
         {
-            var node = context.Node as DelegateDeclarationSyntax;
+            var node = (MethodDeclarationSyntax)context.Node;
 
-            this.HandleDeclaration(context, node.ReturnType);
+            HandleDeclaration(context, node.ReturnType);
         }
 
-        private void HandleDeclaration(SyntaxNodeAnalysisContext context, TypeSyntax returnType)
+        private static void HandleDelegateDeclaration(SyntaxNodeAnalysisContext context)
+        {
+            var node = (DelegateDeclarationSyntax)context.Node;
+
+            HandleDeclaration(context, node.ReturnType);
+        }
+
+        private static void HandleDeclaration(SyntaxNodeAnalysisContext context, TypeSyntax returnType)
         {
             var predefinedType = returnType as PredefinedTypeSyntax;
 
@@ -79,20 +83,20 @@
                 return;
             }
 
-            var documentationStructure = XmlCommentHelper.GetDocumentationStructure(context.Node);
+            var documentationStructure = context.Node.GetDocumentationCommentTriviaSyntax();
 
             if (documentationStructure == null)
             {
                 return;
             }
 
-            if (XmlCommentHelper.GetTopLevelElement(documentationStructure, XmlCommentHelper.InheritdocXmlTag) != null)
+            if (documentationStructure.Content.GetFirstXmlElement(XmlCommentHelper.InheritdocXmlTag) != null)
             {
                 // Don't report if the documentation is inherited.
                 return;
             }
 
-            if (XmlCommentHelper.GetTopLevelElement(documentationStructure, XmlCommentHelper.ReturnsXmlTag) == null)
+            if (documentationStructure.Content.GetFirstXmlElement(XmlCommentHelper.ReturnsXmlTag) == null)
             {
                 context.ReportDiagnostic(Diagnostic.Create(Descriptor, returnType.GetLocation()));
             }

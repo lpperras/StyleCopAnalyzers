@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
     using System.Collections.Immutable;
     using Helpers;
@@ -64,7 +67,7 @@
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     [NoCodeFix("Cannot generate documentation")]
-    public class SA1607PartialElementDocumentationMustHaveSummaryText : PartialElementDocumentationSummaryBase
+    internal class SA1607PartialElementDocumentationMustHaveSummaryText : PartialElementDocumentationSummaryBase
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1607PartialElementDocumentationMustHaveSummaryText"/>
@@ -73,24 +76,15 @@
         public const string DiagnosticId = "SA1607";
         private const string Title = "Partial element documentation must have summary text";
         private const string MessageFormat = "Partial element documentation must have summary text";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "The <summary> or <content> tag within the documentation header for a C# code element is empty.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1607.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1607.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
-
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         protected override void HandleXmlElement(SyntaxNodeAnalysisContext context, XmlNodeSyntax syntax, Location[] diagnosticLocations)

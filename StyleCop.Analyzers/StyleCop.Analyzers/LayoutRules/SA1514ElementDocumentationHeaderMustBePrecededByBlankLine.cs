@@ -1,8 +1,15 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
+    using Microsoft.CodeAnalysis.CSharp;
+    using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// An element documentation header above a C# element is not preceded by a blank line.
@@ -52,7 +59,7 @@
     /// blank line.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1514ElementDocumentationHeaderMustBePrecededByBlankLine : DiagnosticAnalyzer
+    internal class SA1514ElementDocumentationHeaderMustBePrecededByBlankLine : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the
@@ -60,30 +67,119 @@
         /// </summary>
         public const string DiagnosticId = "SA1514";
         private const string Title = "Element documentation header must be preceded by blank line";
-        private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
+        private const string MessageFormat = "Element documentation header must be preceded by blank line";
         private const string Description = "An element documentation header above a C# element is not preceded by a blank line.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1514.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1514.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly ImmutableArray<SyntaxKind> HandledSyntaxKinds =
+            ImmutableArray.Create(
+                SyntaxKind.ClassDeclaration,
+                SyntaxKind.StructDeclaration,
+                SyntaxKind.InterfaceDeclaration,
+                SyntaxKind.EnumDeclaration,
+                SyntaxKind.EnumMemberDeclaration,
+                SyntaxKind.MethodDeclaration,
+                SyntaxKind.ConstructorDeclaration,
+                SyntaxKind.DestructorDeclaration,
+                SyntaxKind.PropertyDeclaration,
+                SyntaxKind.IndexerDeclaration,
+                SyntaxKind.FieldDeclaration,
+                SyntaxKind.DelegateDeclaration,
+                SyntaxKind.EventDeclaration,
+                SyntaxKind.EventFieldDeclaration,
+                SyntaxKind.OperatorDeclaration,
+                SyntaxKind.ConversionOperatorDeclaration);
+
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> DeclarationAction = HandleDeclaration;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Implement analysis
+            context.RegisterCompilationStartAction(CompilationStartAction);
+        }
+
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(DeclarationAction, HandledSyntaxKinds);
+        }
+
+        private static void HandleDeclaration(SyntaxNodeAnalysisContext context)
+        {
+            var nodeTriviaList = context.Node.GetLeadingTrivia();
+            var documentationHeaderIndex = context.Node.GetLeadingTrivia().IndexOf(SyntaxKind.SingleLineDocumentationCommentTrivia);
+
+            if (documentationHeaderIndex == -1)
+            {
+                // there is no documentation header.
+                return;
+            }
+
+            var documentationHeader = nodeTriviaList[documentationHeaderIndex];
+            var triviaList = TriviaHelper.GetContainingTriviaList(documentationHeader, out documentationHeaderIndex);
+            var eolCount = 0;
+            var done = false;
+            for (var i = documentationHeaderIndex - 1; !done && (i >= 0); i--)
+            {
+                var trivia = triviaList[i];
+                if (trivia.IsDirective
+                    && !trivia.IsKind(SyntaxKind.EndIfDirectiveTrivia)
+                    && !trivia.IsKind(SyntaxKind.RegionDirectiveTrivia)
+                    && !trivia.IsKind(SyntaxKind.EndRegionDirectiveTrivia))
+                {
+                    return;
+                }
+
+                switch (trivia.Kind())
+                {
+                case SyntaxKind.WhitespaceTrivia:
+                    break;
+                case SyntaxKind.EndOfLineTrivia:
+                    eolCount++;
+                    break;
+
+                case SyntaxKind.EndIfDirectiveTrivia:
+                case SyntaxKind.RegionDirectiveTrivia:
+                case SyntaxKind.EndRegionDirectiveTrivia:
+                    eolCount++;
+                    done = true;
+                    break;
+                default:
+                    done = true;
+                    break;
+                }
+            }
+
+            if (eolCount >= 2)
+            {
+                // there is a blank line available
+                return;
+            }
+
+            if (!done)
+            {
+                var prevToken = documentationHeader.Token.GetPreviousToken();
+                if (prevToken.IsKind(SyntaxKind.OpenBraceToken))
+                {
+                    // no leading blank line necessary at start of scope.
+                    return;
+                }
+            }
+
+            context.ReportDiagnostic(Diagnostic.Create(Descriptor, GetDiagnosticLocation(documentationHeader)));
+        }
+
+        private static Location GetDiagnosticLocation(SyntaxTrivia documentationHeader)
+        {
+            var documentationHeaderStructure = (DocumentationCommentTriviaSyntax)documentationHeader.GetStructure();
+            return Location.Create(documentationHeaderStructure.SyntaxTree, documentationHeaderStructure.GetLeadingTrivia().Span);
         }
     }
 }

@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.ReadabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.ReadabilityRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -27,38 +31,41 @@
     /// call.</para>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1101PrefixLocalCallsWithThis : DiagnosticAnalyzer
+    internal class SA1101PrefixLocalCallsWithThis : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1101PrefixLocalCallsWithThis"/> analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1101";
-        private const string Title = "Prefix local calls with this";
-        private const string MessageFormat = "Prefix local calls with this";
-        private const string Category = "StyleCop.CSharp.ReadabilityRules";
-        private const string Description = "A call to an instance member of the local class or a base class is not prefixed with 'this.', within a C# code file.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1101.html";
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(ReadabilityResources.SA1101Title), ReadabilityResources.ResourceManager, typeof(ReadabilityResources));
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(ReadabilityResources.SA1101MessageFormat), ReadabilityResources.ResourceManager, typeof(ReadabilityResources));
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(ReadabilityResources.SA1101Description), ReadabilityResources.ResourceManager, typeof(ReadabilityResources));
+        private static readonly string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1101.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.ReadabilityRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly ImmutableArray<SyntaxKind> SimpleNameKinds =
+            ImmutableArray.Create(SyntaxKind.IdentifierName, SyntaxKind.GenericName);
+
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> MemberAccessExpressionAction = HandleMemberAccessExpression;
+        private static readonly Action<SyntaxNodeAnalysisContext> SimpleNameAction = HandleSimpleName;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleMemberAccessExpression, SyntaxKind.SimpleMemberAccessExpression);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleIdentifierName, SyntaxKind.IdentifierName);
+            context.RegisterCompilationStartAction(CompilationStartAction);
+        }
+
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(MemberAccessExpressionAction, SyntaxKind.SimpleMemberAccessExpression);
+            context.RegisterSyntaxNodeActionHonorExclusions(SimpleNameAction, SimpleNameKinds);
         }
 
         /// <summary>
@@ -66,14 +73,14 @@
         /// the expression <c>X.Y.Z.A.B.C</c>.
         /// </summary>
         /// <param name="context">The analysis context for a <see cref="SyntaxNode"/>.</param>
-        private void HandleMemberAccessExpression(SyntaxNodeAnalysisContext context)
+        private static void HandleMemberAccessExpression(SyntaxNodeAnalysisContext context)
         {
             MemberAccessExpressionSyntax syntax = (MemberAccessExpressionSyntax)context.Node;
             IdentifierNameSyntax nameExpression = syntax.Expression as IdentifierNameSyntax;
-            this.HandleIdentifierNameImpl(context, nameExpression);
+            HandleIdentifierNameImpl(context, nameExpression);
         }
 
-        private void HandleIdentifierName(SyntaxNodeAnalysisContext context)
+        private static void HandleSimpleName(SyntaxNodeAnalysisContext context)
         {
             switch (context.Node?.Parent?.Kind() ?? SyntaxKind.None)
             {
@@ -128,17 +135,17 @@
                 break;
             }
 
-            this.HandleIdentifierNameImpl(context, (IdentifierNameSyntax)context.Node);
+            HandleIdentifierNameImpl(context, (SimpleNameSyntax)context.Node);
         }
 
-        private void HandleIdentifierNameImpl(SyntaxNodeAnalysisContext context, IdentifierNameSyntax nameExpression)
+        private static void HandleIdentifierNameImpl(SyntaxNodeAnalysisContext context, SimpleNameSyntax nameExpression)
         {
             if (nameExpression == null)
             {
                 return;
             }
 
-            if (!this.HasThis(nameExpression))
+            if (!HasThis(nameExpression))
             {
                 return;
             }
@@ -182,13 +189,29 @@
                 {
                     return;
                 }
+
+                // This is a workaround for https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/1501 and can
+                // be removed when the underlying bug in roslyn is resolved
+                if (nameExpression.Parent is MemberAccessExpressionSyntax)
+                {
+                    var parentSymbol = context.SemanticModel.GetSymbolInfo(nameExpression.Parent, context.CancellationToken).Symbol as IFieldSymbol;
+
+                    if (parentSymbol != null
+                        && parentSymbol.IsStatic
+                        && parentSymbol.ContainingType.Name == symbol.Name)
+                    {
+                        return;
+                    }
+                }
+
+                // End of workaround
             }
 
             // Prefix local calls with this
             context.ReportDiagnostic(Diagnostic.Create(Descriptor, nameExpression.GetLocation()));
         }
 
-        private bool HasThis(SyntaxNode node)
+        private static bool HasThis(SyntaxNode node)
         {
             for (; node != null; node = node.Parent)
             {

@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -23,41 +27,40 @@
     /// </code>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1006PreprocessorKeywordsMustNotBePrecededBySpace : DiagnosticAnalyzer
+    internal class SA1006PreprocessorKeywordsMustNotBePrecededBySpace : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1006PreprocessorKeywordsMustNotBePrecededBySpace"/>
         /// analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1006";
-        private const string Title = "Preprocessor keywords must not be preceded by space";
-        private const string MessageFormat = "Preprocessor keyword '{0}' must not be preceded by a space.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
-        private const string Description = "A C# preprocessor-type keyword is preceded by space.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1006.html";
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(SpacingResources.SA1006Title), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(SpacingResources.SA1006MessageFormat), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(SpacingResources.SA1006Description), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1006.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
             foreach (var token in root.DescendantTokens(descendIntoTrivia: true))
@@ -65,7 +68,7 @@
                 switch (token.Kind())
                 {
                 case SyntaxKind.HashToken:
-                    this.HandleHashToken(context, token);
+                    HandleHashToken(context, token);
                     break;
 
                 default:
@@ -74,7 +77,7 @@
             }
         }
 
-        private void HandleHashToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
+        private static void HandleHashToken(SyntaxTreeAnalysisContext context, SyntaxToken token)
         {
             if (token.IsMissing)
             {
@@ -93,7 +96,7 @@
             }
 
             // Preprocessor keyword '{keyword}' must not be preceded by a space.
-            context.ReportDiagnostic(Diagnostic.Create(Descriptor, targetToken.GetLocation(), targetToken.Text));
+            context.ReportDiagnostic(Diagnostic.Create(Descriptor, targetToken.GetLocation(), TokenSpacingProperties.RemovePreceding, targetToken.Text));
         }
     }
 }

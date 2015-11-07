@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.MaintainabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.MaintainabilityRules
 {
     using System.Diagnostics;
     using Microsoft.CodeAnalysis;
@@ -9,7 +12,7 @@
     /// A base class for <see cref="System.Diagnostics.Debug"/> diagnostics.
     /// It is used to share code in diagnostics <see cref="SA1405DebugAssertMustProvideMessageText"/> and <see cref="SA1406DebugFailMustProvideMessageText"/>
     /// </summary>
-    public abstract class SystemDiagnosticsDebugDiagnosticBase : DiagnosticAnalyzer
+    internal abstract class SystemDiagnosticsDebugDiagnosticBase : DiagnosticAnalyzer
     {
         /// <summary>
         /// Analyzes a <see cref="InvocationExpressionSyntax"/> node to add a diagnostic to static method calls in <see cref="System.Diagnostics.Debug"/>.
@@ -19,7 +22,7 @@
         /// <param name="methodName">The method name that should be detected</param>
         /// <param name="parameterIndex">The index, the string parameter that should be checked, is at</param>
         /// <param name="descriptor">The descriptor of the diagnostic that should be added</param>
-        protected internal void HandleMethodCall(SyntaxNodeAnalysisContext context, string methodName, int parameterIndex, DiagnosticDescriptor descriptor)
+        protected internal static void HandleMethodCall(SyntaxNodeAnalysisContext context, string methodName, int parameterIndex, DiagnosticDescriptor descriptor)
         {
             var invocationExpressionSyntax = context.Node as InvocationExpressionSyntax;
             var memberAccessExpressionSyntax = invocationExpressionSyntax?.Expression as MemberAccessExpressionSyntax;
@@ -36,7 +39,7 @@
                     if (symbolInfo.ContainingType == debugType
                         && symbolInfo.Name == methodName)
                     {
-                        if (symbolInfo.Parameters.Length <= parameterIndex)
+                        if ((invocationExpressionSyntax.ArgumentList?.Arguments.Count ?? 0) <= parameterIndex)
                         {
                             // Wrong overload was used, e.g. Debug.Assert(bool condition)
                             context.ReportDiagnostic(Diagnostic.Create(descriptor, invocationExpressionSyntax.GetLocation()));
@@ -47,6 +50,7 @@
                             if (messageParameter?.Expression != null)
                             {
                                 Optional<object> constantValue = context.SemanticModel.GetConstantValue(messageParameter.Expression);
+
                                 // Report a diagnostic if the message is constant and null or whitespace
                                 if (constantValue.HasValue && string.IsNullOrWhiteSpace(constantValue.Value as string))
                                 {

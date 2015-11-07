@@ -1,10 +1,15 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// The opening or closing curly bracket within a C# statement, element, or expression is not placed on its own
@@ -50,7 +55,7 @@
     /// </code>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1500CurlyBracketsForMultiLineStatementsMustNotShareLine : DiagnosticAnalyzer
+    internal class SA1500CurlyBracketsForMultiLineStatementsMustNotShareLine : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the
@@ -59,83 +64,91 @@
         public const string DiagnosticId = "SA1500";
         private const string Title = "Curly brackets for multi-line statements must not share line";
         private const string MessageFormat = "Curly brackets for multi-line statements must not share line";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
         private const string Description = "The opening or closing curly bracket within a C# statement, element, or expression is not placed on its own line.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1500.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1500.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly ImmutableArray<SyntaxKind> BaseTypeDeclarationKinds =
+            ImmutableArray.Create(SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.InterfaceDeclaration, SyntaxKind.EnumDeclaration);
+
+        private static readonly ImmutableArray<SyntaxKind> InitializerExpressionKinds =
+            ImmutableArray.Create(SyntaxKind.ObjectInitializerExpression, SyntaxKind.ArrayInitializerExpression, SyntaxKind.CollectionInitializerExpression);
+
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> NamespaceDeclarationAction = HandleNamespaceDeclaration;
+        private static readonly Action<SyntaxNodeAnalysisContext> BaseTypeDeclarationAction = HandleBaseTypeDeclaration;
+        private static readonly Action<SyntaxNodeAnalysisContext> AccessorListAction = HandleAccessorList;
+        private static readonly Action<SyntaxNodeAnalysisContext> BlockAction = HandleBlock;
+        private static readonly Action<SyntaxNodeAnalysisContext> SwitchStatementAction = HandleSwitchStatement;
+        private static readonly Action<SyntaxNodeAnalysisContext> InitializerExpressionAction = HandleInitializerExpression;
+        private static readonly Action<SyntaxNodeAnalysisContext> AnonymousObjectCreationExpressionAction = HandleAnonymousObjectCreationExpression;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleNamespaceDeclarationSyntax, SyntaxKind.NamespaceDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleBaseTypeDeclarationSyntax, SyntaxKind.ClassDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleBaseTypeDeclarationSyntax, SyntaxKind.EnumDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleBaseTypeDeclarationSyntax, SyntaxKind.InterfaceDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleBaseTypeDeclarationSyntax, SyntaxKind.StructDeclaration);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleAccessorListSyntax, SyntaxKind.AccessorList);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleBlockSyntax, SyntaxKind.Block);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleSwitchStatementSyntax, SyntaxKind.SwitchStatement);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleInitializerExpressionSyntax, SyntaxKind.ObjectInitializerExpression, SyntaxKind.ArrayInitializerExpression, SyntaxKind.CollectionInitializerExpression);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleAnonymousObjectCreationExpressionSyntax, SyntaxKind.AnonymousObjectCreationExpression);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleNamespaceDeclarationSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(NamespaceDeclarationAction, SyntaxKind.NamespaceDeclaration);
+            context.RegisterSyntaxNodeActionHonorExclusions(BaseTypeDeclarationAction, BaseTypeDeclarationKinds);
+            context.RegisterSyntaxNodeActionHonorExclusions(AccessorListAction, SyntaxKind.AccessorList);
+            context.RegisterSyntaxNodeActionHonorExclusions(BlockAction, SyntaxKind.Block);
+            context.RegisterSyntaxNodeActionHonorExclusions(SwitchStatementAction, SyntaxKind.SwitchStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(InitializerExpressionAction, InitializerExpressionKinds);
+            context.RegisterSyntaxNodeActionHonorExclusions(AnonymousObjectCreationExpressionAction, SyntaxKind.AnonymousObjectCreationExpression);
+        }
+
+        private static void HandleNamespaceDeclaration(SyntaxNodeAnalysisContext context)
         {
             var syntax = (NamespaceDeclarationSyntax)context.Node;
-            this.CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
+            CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
         }
 
-        private void HandleBaseTypeDeclarationSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleBaseTypeDeclaration(SyntaxNodeAnalysisContext context)
         {
             var syntax = (BaseTypeDeclarationSyntax)context.Node;
-            this.CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
+            CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
         }
 
-        private void HandleAccessorListSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleAccessorList(SyntaxNodeAnalysisContext context)
         {
             var syntax = (AccessorListSyntax)context.Node;
-            this.CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
+            CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
         }
 
-        private void HandleBlockSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleBlock(SyntaxNodeAnalysisContext context)
         {
             var syntax = (BlockSyntax)context.Node;
-            this.CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
+            CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
         }
 
-        private void HandleSwitchStatementSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleSwitchStatement(SyntaxNodeAnalysisContext context)
         {
             var syntax = (SwitchStatementSyntax)context.Node;
-            this.CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
+            CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
         }
 
-        private void HandleInitializerExpressionSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleInitializerExpression(SyntaxNodeAnalysisContext context)
         {
             var syntax = (InitializerExpressionSyntax)context.Node;
-            this.CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
+            CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
         }
 
-        private void HandleAnonymousObjectCreationExpressionSyntax(SyntaxNodeAnalysisContext context)
+        private static void HandleAnonymousObjectCreationExpression(SyntaxNodeAnalysisContext context)
         {
             var syntax = (AnonymousObjectCreationExpressionSyntax)context.Node;
-            this.CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
+            CheckCurlyBraces(context, syntax.OpenBraceToken, syntax.CloseBraceToken);
         }
 
-        private void CheckCurlyBraces(SyntaxNodeAnalysisContext context, SyntaxToken openBraceToken, SyntaxToken closeBraceToken)
+        private static void CheckCurlyBraces(SyntaxNodeAnalysisContext context, SyntaxToken openBraceToken, SyntaxToken closeBraceToken)
         {
             bool checkCloseBrace = true;
 
@@ -163,34 +176,34 @@
                 }
             }
 
-            this.CheckCurlyBracketToken(context, openBraceToken);
+            CheckCurlyBracketToken(context, openBraceToken);
             if (checkCloseBrace)
             {
-                this.CheckCurlyBracketToken(context, closeBraceToken);
+                CheckCurlyBracketToken(context, closeBraceToken);
             }
         }
 
-        private static int? GetStartLine(SyntaxToken token)
+        private static int GetStartLine(SyntaxToken token)
         {
-            return token.GetLocation()?.GetLineSpan().StartLinePosition.Line;
+            return token.GetLineSpan().StartLinePosition.Line;
         }
 
-        private void CheckCurlyBracketToken(SyntaxNodeAnalysisContext context, SyntaxToken token)
+        private static void CheckCurlyBracketToken(SyntaxNodeAnalysisContext context, SyntaxToken token)
         {
             if (token.IsMissing)
             {
                 return;
             }
 
-            Location location = token.GetLocation();
-            int line = location.GetLineSpan().StartLinePosition.Line;
+            int line = token.GetLineSpan().StartLinePosition.Line;
 
             SyntaxToken previousToken = token.GetPreviousToken();
             if (!previousToken.IsMissing)
             {
-                if (previousToken.GetLocation().GetLineSpan().StartLinePosition.Line == line)
+                if (previousToken.GetLineSpan().StartLinePosition.Line == line)
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, location));
+                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation()));
+
                     // no need to report more than one instance for this token
                     return;
                 }
@@ -204,16 +217,21 @@
                 case SyntaxKind.CloseParenToken:
                 case SyntaxKind.CommaToken:
                 case SyntaxKind.SemicolonToken:
+                case SyntaxKind.DotToken:
                     // these are allowed to appear on the same line
+                    return;
+
+                case SyntaxKind.None:
+                    // last token of this file
                     return;
 
                 default:
                     break;
                 }
 
-                if (nextToken.GetLocation().GetLineSpan().StartLinePosition.Line == line)
+                if (nextToken.GetLineSpan().StartLinePosition.Line == line)
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, location));
+                    context.ReportDiagnostic(Diagnostic.Create(Descriptor, token.GetLocation()));
                 }
             }
         }

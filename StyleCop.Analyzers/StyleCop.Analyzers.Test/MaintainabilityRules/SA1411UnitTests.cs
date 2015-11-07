@@ -1,24 +1,21 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.Diagnostics;
-using StyleCop.Analyzers.MaintainabilityRules;
-using TestHelper;
-using Xunit;
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace StyleCop.Analyzers.Test.MaintainabilityRules
 {
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.CodeAnalysis.CodeFixes;
+    using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.MaintainabilityRules;
+    using TestHelper;
+    using Xunit;
+
     public class SA1411UnitTests : CodeFixVerifier
     {
         [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        [Fact]
-        public async Task TestMissingParenthesis()
+        public async Task TestMissingParenthesisAsync()
         {
             var testCode = @"public class Foo
 {
@@ -31,7 +28,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestNonEmptyParameterList()
+        public async Task TestNonEmptyParameterListAsync()
         {
             var testCode = @"public class Foo
 {
@@ -44,7 +41,7 @@ namespace StyleCop.Analyzers.Test.MaintainabilityRules
         }
 
         [Fact]
-        public async Task TestNonEmptyParameterListNamedArgument()
+        public async Task TestNonEmptyParameterListNamedArgumentAsync()
         {
             var testCode = @"
 using System.Runtime.CompilerServices;
@@ -59,7 +56,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestEmptyParameterList()
+        public async Task TestEmptyParameterListAsync()
         {
             var testCode = @"public class Foo
 {
@@ -74,7 +71,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestEmptyParameterListMultipleAttributes()
+        public async Task TestEmptyParameterListMultipleAttributesAsync()
         {
             var testCode = @"public class Foo
 {
@@ -93,7 +90,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestCodeFix()
+        public async Task TestCodeFixAsync()
         {
             var oldSource = @"public class Foo
 {
@@ -115,7 +112,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestCodeFixDoesNotRemoveExteriorTrivia()
+        public async Task TestCodeFixDoesNotRemoveExteriorTriviaAsync()
         {
             var oldSource = @"public class Foo
 {
@@ -137,7 +134,7 @@ public class Foo
         }
 
         [Fact]
-        public async Task TestCodeFixMultipleAttributes()
+        public async Task TestCodeFixMultipleAttributesAsync()
         {
             var oldSource = @"public class Foo
 {
@@ -158,9 +155,9 @@ public class Foo
             await this.VerifyCSharpFixAsync(oldSource, newSource, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1411AttributeConstructorMustNotUseUnnecessaryParenthesis();
+            yield return new SA1411AttributeConstructorMustNotUseUnnecessaryParenthesis();
         }
 
         protected override CodeFixProvider GetCSharpCodeFixProvider()

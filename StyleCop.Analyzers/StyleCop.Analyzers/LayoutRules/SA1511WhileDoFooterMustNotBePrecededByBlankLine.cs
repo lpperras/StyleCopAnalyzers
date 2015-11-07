@@ -1,8 +1,15 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
+    using Microsoft.CodeAnalysis.CSharp;
+    using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// The while footer at the bottom of a do-while statement is separated from the statement by a blank line.
@@ -25,38 +32,50 @@
     /// </code>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1511WhileDoFooterMustNotBePrecededByBlankLine : DiagnosticAnalyzer
+    internal class SA1511WhileDoFooterMustNotBePrecededByBlankLine : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1511WhileDoFooterMustNotBePrecededByBlankLine"/>
         /// analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1511";
-        private const string Title = "while-do footer must not be preceded by blank line";
-        private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
+        private const string Title = "While-do footer must not be preceded by blank line";
+        private const string MessageFormat = "While-do footer must not be preceded by blank line";
         private const string Description = "The while footer at the bottom of a do-while statement is separated from the statement by a blank line.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1511.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1511.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxNodeAnalysisContext> DoStatementAction = HandleDoStatement;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Implement analysis
+            context.RegisterCompilationStartAction(CompilationStartAction);
+        }
+
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxNodeActionHonorExclusions(DoStatementAction, SyntaxKind.DoStatement);
+        }
+
+        private static void HandleDoStatement(SyntaxNodeAnalysisContext context)
+        {
+            var doStatement = (DoStatementSyntax)context.Node;
+            var whileKeyword = doStatement.WhileKeyword;
+
+            if (!whileKeyword.IsPrecededByBlankLines())
+            {
+                return;
+            }
+
+            context.ReportDiagnostic(Diagnostic.Create(Descriptor, whileKeyword.GetLocation()));
         }
     }
 }

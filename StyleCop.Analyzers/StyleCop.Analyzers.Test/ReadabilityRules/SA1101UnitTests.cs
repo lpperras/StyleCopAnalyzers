@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.ReadabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.ReadabilityRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.CodeAnalysis.CodeFixes;
@@ -243,7 +247,7 @@
         ";
 
         [Fact]
-        public async Task TestPrefixLocalCallsWithThisDiagnostics()
+        public async Task TestPrefixLocalCallsWithThisDiagnosticsAsync()
         {
             var expected = new[]
             {
@@ -260,14 +264,51 @@
         }
 
         [Fact]
-        public async Task TestPrefixLocalCallsWithThisCodeFix()
+        public async Task TestPrefixLocalCallsWithThisWithGenericArgumentsAsync()
+        {
+            string testCode = @"public class Test_SA1101
+{
+    public void Foo()
+    {
+        ConvertAll(42); // SA1101
+        this.ConvertAll(42); // no SA1101
+        ConvertAll<int>(42); // SA1101
+        this.ConvertAll<int>(42); // no SA1101
+    }
+    public void ConvertAll<T>(T value) { }
+}";
+            string fixedCode = @"public class Test_SA1101
+{
+    public void Foo()
+    {
+        this.ConvertAll(42); // SA1101
+        this.ConvertAll(42); // no SA1101
+        this.ConvertAll<int>(42); // SA1101
+        this.ConvertAll<int>(42); // no SA1101
+    }
+    public void ConvertAll<T>(T value) { }
+}";
+
+            var expected = new[]
+            {
+                this.CSharpDiagnostic().WithLocation(5, 9),
+                this.CSharpDiagnostic().WithLocation(7, 9)
+            };
+
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpFixAsync(testCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+        }
+
+        [Fact]
+        public async Task TestPrefixLocalCallsWithThisCodeFixAsync()
         {
             await this.VerifyCSharpFixAsync(ReferenceCode, fixedCode, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1101PrefixLocalCallsWithThis();
+            yield return new SA1101PrefixLocalCallsWithThis();
         }
 
         protected override CodeFixProvider GetCSharpCodeFixProvider()

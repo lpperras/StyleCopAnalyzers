@@ -1,6 +1,10 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
     using System.Collections.Immutable;
+    using System.Diagnostics.CodeAnalysis;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -8,6 +12,8 @@
     /// The element documentation for the element contains one or more spelling mistakes or unrecognized words.
     /// </summary>
     /// <remarks>
+    /// <para>This diagnostic is not implemented in StyleCopAnalyzers.</para>
+    ///
     /// <para>A violation of this rule occurs when the element documentation contains spelling mistakes:</para>
     ///
     /// <code language="csharp">
@@ -31,7 +37,7 @@
     /// Joinsnames to a CustomDictionary.xml file.</para>
     ///
     /// <list type="bullet">
-    /// <item>CustomDictionary.xml files can contain words that the spelling checker does not normally recognise.</item>
+    /// <item>CustomDictionary.xml files can contain words that the spelling checker does not normally recognize.</item>
     /// <item>The CustomDictionary.xml file should be placed in the same folder as the StyleCop.dll and the Rules. That
     /// folder (and all subfolders) are checked for the dictionary files.</item>
     /// <item>StyleCop loads CustomDictionary.xml, CustomDictionary.en-GB.xml and then CustomDictionary.en.xml (where
@@ -47,7 +53,8 @@
     /// </list>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1650ElementDocumentationMustBeSpelledCorrectly : DiagnosticAnalyzer
+    [NoDiagnostic("This diagnostic has an unacceptable rate of false positives.")]
+    internal class SA1650ElementDocumentationMustBeSpelledCorrectly : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1650ElementDocumentationMustBeSpelledCorrectly"/>
@@ -56,29 +63,21 @@
         public const string DiagnosticId = "SA1650";
         private const string Title = "Element documentation must be spelled correctly";
         private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "The element documentation for the element contains one or more spelling mistakes or unrecognized words.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1650.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1650.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledByDefault, Description, HelpLink, WellKnownDiagnosticTags.NotConfigurable);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
+        /// <inheritdoc/>
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
             ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
-
-        /// <inheritdoc/>
+        [ExcludeFromCodeCoverage]
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Implement analysis
+            // This diagnostic is not implemented (by design) in StyleCopAnalyzers.
         }
     }
 }

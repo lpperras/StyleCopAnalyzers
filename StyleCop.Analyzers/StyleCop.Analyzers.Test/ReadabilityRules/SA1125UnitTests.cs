@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.Test.ReadabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.ReadabilityRules
 {
     using System;
     using System.Collections.Generic;
@@ -27,7 +30,7 @@
         [InlineData("Nullable{T}")]
         [InlineData("System.Nullable{T}")]
         [InlineData("global::System.Nullable{T}")]
-        public async Task TestSeeAlsoNullable(string form)
+        public async Task TestSeeAlsoNullableAsync(string form)
         {
             string template = @"
 namespace System
@@ -39,7 +42,7 @@ namespace System
 }}
 ";
             string testCode = string.Format(template, form);
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -54,7 +57,7 @@ namespace System
         [InlineData("Nullable{T}")]
         [InlineData("System.Nullable{T}")]
         [InlineData("global::System.Nullable{T}")]
-        public async Task TestSeeAlsoNullableValue(string form)
+        public async Task TestSeeAlsoNullableValueAsync(string form)
         {
             string template = @"
 namespace System
@@ -66,7 +69,7 @@ namespace System
 }}
 ";
             string testCode = string.Format(template, form);
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -85,7 +88,7 @@ namespace System
         [InlineData("Nullable{int}", "int?")]
         [InlineData("System.Nullable{int}", "int?")]
         [InlineData("global::System.Nullable{int}", "int?")]
-        public async Task TestSeeAlsoNullableShorthand(string longForm, string shortForm)
+        public async Task TestSeeAlsoNullableShorthandAsync(string longForm, string shortForm)
         {
             string template = @"
 using System.Collections.Generic;
@@ -102,8 +105,8 @@ namespace System
             string fixedCode = string.Format(template, shortForm);
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(6, 55);
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
-            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -130,7 +133,7 @@ namespace System
         [InlineData("Nullable<>", "Nullable<>")]
         [InlineData("System.Nullable<>", "System.Nullable<>")]
         [InlineData("global::System.Nullable<>", "global::System.Nullable<>")]
-        public async Task TestTypeOfNullable(string longForm, string shortForm)
+        public async Task TestTypeOfNullableAsync(string longForm, string shortForm)
         {
             string template = @"
 namespace System
@@ -148,10 +151,10 @@ namespace System
             if (testCode != fixedCode)
             {
                 DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 36);
-                await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
+                await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
             }
 
-            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
@@ -163,7 +166,7 @@ namespace System
         [InlineData("Nullable<T>", "T?")]
         [InlineData("System.Nullable<T>", "T?")]
         [InlineData("global::System.Nullable<T>", "T?")]
-        public async Task TestNullableField(string longForm, string shortForm)
+        public async Task TestNullableFieldAsync(string longForm, string shortForm)
         {
             string template = @"
 namespace System
@@ -179,8 +182,8 @@ namespace System
             string fixedCode = string.Format(template, shortForm);
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(7, 9);
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
-            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
@@ -192,7 +195,7 @@ namespace System
         [InlineData("Nullable<T>", "T?")]
         [InlineData("System.Nullable<T>", "T?")]
         [InlineData("global::System.Nullable<T>", "T?")]
-        public async Task TestDefaultNullableValue(string longForm, string shortForm)
+        public async Task TestDefaultNullableValueAsync(string longForm, string shortForm)
         {
             string template = @"
 namespace System
@@ -211,8 +214,8 @@ namespace System
             string fixedCode = string.Format(template, shortForm);
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(9, 41);
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
-            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -227,7 +230,7 @@ namespace System
         [InlineData("Nullable<int>")]
         [InlineData("System.Nullable<int>")]
         [InlineData("global::System.Nullable<int>")]
-        public async Task TestNameOfNullable(string form)
+        public async Task TestNameOfNullableAsync(string form)
         {
             string template = @"
 namespace System
@@ -240,7 +243,7 @@ namespace System
 }}
 ";
             string testCode = string.Format(template, form);
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -259,7 +262,7 @@ namespace System
         [InlineData("Nullable<int>")]
         [InlineData("System.Nullable<int>")]
         [InlineData("global::System.Nullable<int>")]
-        public async Task TestNameOfNullableValue(string form)
+        public async Task TestNameOfNullableValueAsync(string form)
         {
             string template = @"
 namespace System
@@ -272,7 +275,7 @@ namespace System
 }}
 ";
             string testCode = string.Format(template, form);
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -287,7 +290,7 @@ namespace System
         [InlineData("Nullable<int>")]
         [InlineData("System.Nullable<int>")]
         [InlineData("global::System.Nullable<int>")]
-        public async Task TestAccessObjectEqualThroughNullable(string form)
+        public async Task TestAccessObjectEqualThroughNullableAsync(string form)
         {
             string template = @"
 namespace System
@@ -300,7 +303,7 @@ namespace System
 }}
 ";
             string testCode = string.Format(template, form);
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
         [Theory]
@@ -312,7 +315,7 @@ namespace System
         [InlineData("Nullable<T>", "T?")]
         [InlineData("System.Nullable<T>", "T?")]
         [InlineData("global::System.Nullable<T>", "T?")]
-        public async Task TestNameOfListOfNullable(string longForm, string shortForm)
+        public async Task TestNameOfListOfNullableAsync(string longForm, string shortForm)
         {
             string template = @"
 using System.Collections.Generic;
@@ -329,13 +332,13 @@ namespace System
             string fixedCode = string.Format(template, shortForm);
 
             DiagnosticResult expected = this.CSharpDiagnostic().WithLocation(8, 43);
-            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None);
-            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None);
+            await this.VerifyCSharpDiagnosticAsync(testCode, expected, CancellationToken.None).ConfigureAwait(false);
+            await this.VerifyCSharpDiagnosticAsync(fixedCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
         {
-            return new SA1125UseShorthandForNullableTypes();
+            yield return new SA1125UseShorthandForNullableTypes();
         }
     }
 }

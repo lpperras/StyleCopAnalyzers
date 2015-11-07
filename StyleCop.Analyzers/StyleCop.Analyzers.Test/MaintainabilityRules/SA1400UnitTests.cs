@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.Test.MaintainabilityRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.Test.MaintainabilityRules
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Analyzers.MaintainabilityRules;
@@ -11,13 +15,6 @@
     public class SA1400UnitTests : CodeFixVerifier
     {
         private const string Tab = "\t";
-
-        [Fact]
-        public async Task TestEmptySource()
-        {
-            var testCode = string.Empty;
-            await this.VerifyCSharpDiagnosticAsync(testCode, EmptyDiagnosticResults, CancellationToken.None).ConfigureAwait(false);
-        }
 
         [Fact]
         public async Task TestClassDeclarationAsync()
@@ -655,6 +652,16 @@
             await this.TestNestedDeclarationWithDirectivesAsync("private", "OuterTypeName", "static OuterTypeName(", " ) { }", warning: false).ConfigureAwait(false);
         }
 
+        protected override IEnumerable<DiagnosticAnalyzer> GetCSharpDiagnosticAnalyzers()
+        {
+            yield return new SA1400AccessModifierMustBeDeclared();
+        }
+
+        protected override CodeFixProvider GetCSharpCodeFixProvider()
+        {
+            return new SA1400CodeFixProvider();
+        }
+
         private async Task TestTypeDeclarationAsync(string keyword, bool warning = true)
         {
             await this.TestDeclarationAsync("internal", "TypeName", $"{keyword} TypeName", "{\n}", warning: warning).ConfigureAwait(false);
@@ -845,16 +852,6 @@ public {containingType} OuterTypeName {baseTypeList} {{
 {baseTypeDeclarations}";
 
             await this.VerifyCSharpFixAsync(testCode, fixedTestCode).ConfigureAwait(false);
-        }
-
-        protected override DiagnosticAnalyzer GetCSharpDiagnosticAnalyzer()
-        {
-            return new SA1400AccessModifierMustBeDeclared();
-        }
-
-        protected override CodeFixProvider GetCSharpCodeFixProvider()
-        {
-            return new SA1400CodeFixProvider();
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿namespace StyleCop.Analyzers.DocumentationRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.DocumentationRules
 {
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
@@ -36,7 +39,7 @@
     ///
     /// <code language="csharp">
     /// /// &lt;summary&gt;
-    /// /// Gets the name of the customer. 
+    /// /// Gets the name of the customer.
     /// /// &lt;/summary&gt;
     /// public string Name
     /// {
@@ -66,7 +69,7 @@
     ///
     /// <code language="csharp">
     /// /// &lt;summary&gt;
-    /// /// Gets or sets the name of the customer. 
+    /// /// Gets or sets the name of the customer.
     /// /// &lt;/summary&gt;
     /// protected string Name
     /// {
@@ -82,7 +85,7 @@
     /// internal class Class1
     /// {
     ///     /// &lt;summary&gt;
-    ///     /// Gets or sets the name of the customer. 
+    ///     /// Gets or sets the name of the customer.
     ///     /// &lt;/summary&gt;
     ///     protected string Name
     ///     {
@@ -98,7 +101,7 @@
     ///     public class Class2
     ///     {
     ///         /// &lt;summary&gt;
-    ///         /// Gets or sets the name of the customer. 
+    ///         /// Gets or sets the name of the customer.
     ///         /// &lt;/summary&gt;
     ///         public string Name
     ///         {
@@ -124,7 +127,7 @@
     ///         public class Class3
     ///         {
     ///             /// &lt;summary&gt;
-    ///             /// Gets or sets the name of the customer. 
+    ///             /// Gets or sets the name of the customer.
     ///             /// &lt;/summary&gt;
     ///             public string Name
     ///             {
@@ -147,7 +150,7 @@
     ///     public class Class2
     ///     {
     ///         /// &lt;summary&gt;
-    ///         /// Gets or sets the name of the customer. 
+    ///         /// Gets or sets the name of the customer.
     ///         /// &lt;/summary&gt;
     ///         internal string Name
     ///         {
@@ -166,7 +169,7 @@
     /// </list>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1624PropertySummaryDocumentationMustOmitSetAccessorWithRestrictedAccess : DiagnosticAnalyzer
+    internal class SA1624PropertySummaryDocumentationMustOmitSetAccessorWithRestrictedAccess : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the
@@ -175,24 +178,15 @@
         public const string DiagnosticId = "SA1624";
         private const string Title = "Property summary documentation must omit set accessor with restricted access";
         private const string MessageFormat = "TODO: Message format";
-        private const string Category = "StyleCop.CSharp.DocumentationRules";
         private const string Description = "The documentation text within a C# property's <summary> tag takes into account all of the accessors within the property, but one of the accessors has limited access.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1624.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1624.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
-
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.DocumentationRules, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)

@@ -1,10 +1,17 @@
-﻿namespace StyleCop.Analyzers.LayoutRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.LayoutRules
 {
+    using System;
+    using System.Collections.Generic;
     using System.Collections.Immutable;
+    using System.Linq;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;
     using Microsoft.CodeAnalysis.Diagnostics;
+    using StyleCop.Analyzers.Helpers;
 
     /// <summary>
     /// The opening and closing curly brackets for a C# statement have been omitted.
@@ -48,7 +55,7 @@
     /// </code>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1503CurlyBracketsMustNotBeOmitted : DiagnosticAnalyzer
+    internal class SA1503CurlyBracketsMustNotBeOmitted : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1503CurlyBracketsMustNotBeOmitted"/> analyzer.
@@ -56,85 +63,88 @@
         public const string DiagnosticId = "SA1503";
         private const string Title = "Curly brackets must not be omitted";
         private const string MessageFormat = "Curly brackets must not be omitted";
-        private const string Category = "StyleCop.CSharp.LayoutRules";
         private const string Description = "The opening and closing curly brackets for a C# statement have been omitted.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1503.html";
+        private const string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1503.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.LayoutRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleIfStatement, SyntaxKind.IfStatement);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleWhileStatement, SyntaxKind.WhileStatement);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleForStatement, SyntaxKind.ForStatement);
-            context.RegisterSyntaxNodeActionHonorExclusions(this.HandleForEachStatement, SyntaxKind.ForEachStatement);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleIfStatement(SyntaxNodeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
         {
-            var ifStatement = context.Node as IfStatementSyntax;
-            if (ifStatement != null)
-            {
-                this.CheckChildStatement(context, ifStatement.Statement);
+            context.RegisterSyntaxNodeActionHonorExclusions(HandleIfStatement, SyntaxKind.IfStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(ctx => CheckChildStatement(ctx, ((DoStatementSyntax)ctx.Node).Statement), SyntaxKind.DoStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(ctx => CheckChildStatement(ctx, ((WhileStatementSyntax)ctx.Node).Statement), SyntaxKind.WhileStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(ctx => CheckChildStatement(ctx, ((ForStatementSyntax)ctx.Node).Statement), SyntaxKind.ForStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(ctx => CheckChildStatement(ctx, ((ForEachStatementSyntax)ctx.Node).Statement), SyntaxKind.ForEachStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(ctx => CheckChildStatement(ctx, ((FixedStatementSyntax)ctx.Node).Statement), SyntaxKind.FixedStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(ctx => CheckChildStatement(ctx, ((UsingStatementSyntax)ctx.Node).Statement), SyntaxKind.UsingStatement);
+            context.RegisterSyntaxNodeActionHonorExclusions(ctx => CheckChildStatement(ctx, ((LockStatementSyntax)ctx.Node).Statement), SyntaxKind.LockStatement);
+        }
 
-                if (ifStatement.Else != null)
+        private static void HandleIfStatement(SyntaxNodeAnalysisContext context)
+        {
+            var ifStatement = (IfStatementSyntax)context.Node;
+            if (ifStatement.Parent.IsKind(SyntaxKind.ElseClause))
+            {
+                // this will be analyzed as a clause of the outer if statement
+                return;
+            }
+
+            List<StatementSyntax> clauses = new List<StatementSyntax>();
+            for (IfStatementSyntax current = ifStatement; current != null; current = current.Else?.Statement as IfStatementSyntax)
+            {
+                clauses.Add(current.Statement);
+                if (current.Else != null && !(current.Else.Statement is IfStatementSyntax))
                 {
-                    // an 'else' directly followed by an 'if' should not trigger this diagnostic.
-                    if (!ifStatement.Else.Statement.IsKind(SyntaxKind.IfStatement))
-                    {
-                        this.CheckChildStatement(context, ifStatement.Else.Statement);
-                    }
+                    clauses.Add(current.Else.Statement);
                 }
             }
-        }
 
-        private void HandleWhileStatement(SyntaxNodeAnalysisContext context)
-        {
-            var whileStatement = context.Node as WhileStatementSyntax;
-            if (whileStatement != null)
+            if (context.SemanticModel.Compilation.Options.SpecificDiagnosticOptions.GetValueOrDefault(SA1520UseCurlyBracketsConsistently.DiagnosticId, ReportDiagnostic.Default) != ReportDiagnostic.Suppress)
             {
-                this.CheckChildStatement(context, whileStatement.Statement);
+                // inconsistencies will be reported as SA1520, as long as it's not suppressed
+                if (clauses.OfType<BlockSyntax>().Any())
+                {
+                    return;
+                }
+            }
+
+            foreach (StatementSyntax clause in clauses)
+            {
+                CheckChildStatement(context, clause);
             }
         }
 
-        private void HandleForStatement(SyntaxNodeAnalysisContext context)
+        private static void CheckChildStatement(SyntaxNodeAnalysisContext context, StatementSyntax childStatement)
         {
-            var forStatement = context.Node as ForStatementSyntax;
-            if (forStatement != null)
+            if (childStatement is BlockSyntax)
             {
-                this.CheckChildStatement(context, forStatement.Statement);
+                return;
             }
-        }
 
-        private void HandleForEachStatement(SyntaxNodeAnalysisContext context)
-        {
-            var forEachStatement = context.Node as ForEachStatementSyntax;
-            if (forEachStatement != null)
+            if (context.SemanticModel.Compilation.Options.SpecificDiagnosticOptions.GetValueOrDefault(SA1519CurlyBracketsMustNotBeOmittedFromMultiLineChildStatement.DiagnosticId, ReportDiagnostic.Default) != ReportDiagnostic.Suppress)
             {
-                this.CheckChildStatement(context, forEachStatement.Statement);
+                // diagnostics for multi-line statements is handled by SA1519, as long as it's not suppressed
+                FileLinePositionSpan lineSpan = childStatement.GetLineSpan();
+                if (lineSpan.StartLinePosition.Line != lineSpan.EndLinePosition.Line)
+                {
+                    return;
+                }
             }
-        }
 
-        private void CheckChildStatement(SyntaxNodeAnalysisContext context, StatementSyntax childStatement)
-        {
-            if (!(childStatement is BlockSyntax))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, childStatement.GetLocation()));
-            }
+            context.ReportDiagnostic(Diagnostic.Create(Descriptor, childStatement.GetLocation()));
         }
     }
 }

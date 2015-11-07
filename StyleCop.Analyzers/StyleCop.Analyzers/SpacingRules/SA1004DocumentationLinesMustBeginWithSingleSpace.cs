@@ -1,5 +1,9 @@
-﻿namespace StyleCop.Analyzers.SpacingRules
+﻿// Copyright (c) Tunnel Vision Laboratories, LLC. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace StyleCop.Analyzers.SpacingRules
 {
+    using System;
     using System.Collections.Immutable;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -37,41 +41,40 @@
     /// </code>
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SA1004DocumentationLinesMustBeginWithSingleSpace : DiagnosticAnalyzer
+    internal class SA1004DocumentationLinesMustBeginWithSingleSpace : DiagnosticAnalyzer
     {
         /// <summary>
         /// The ID for diagnostics produced by the <see cref="SA1004DocumentationLinesMustBeginWithSingleSpace"/>
         /// analyzer.
         /// </summary>
         public const string DiagnosticId = "SA1004";
-        private const string Title = "Documentation lines must begin with single space";
-        private const string MessageFormat = "Documentation line must begin with a space.";
-        private const string Category = "StyleCop.CSharp.SpacingRules";
-        private const string Description = "A line within a documentation header above a C# element does not begin with a single space.";
-        private const string HelpLink = "http://www.stylecop.com/docs/SA1004.html";
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(SpacingResources.SA1004Title), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(SpacingResources.SA1004MessageFormat), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(SpacingResources.SA1004Description), SpacingResources.ResourceManager, typeof(SpacingResources));
+        private static readonly string HelpLink = "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1004.md";
 
         private static readonly DiagnosticDescriptor Descriptor =
-            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, AnalyzerConstants.DisabledNoTests, Description, HelpLink);
+            new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, AnalyzerCategory.SpacingRules, DiagnosticSeverity.Warning, AnalyzerConstants.EnabledByDefault, Description, HelpLink);
 
-        private static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnosticsValue =
-            ImmutableArray.Create(Descriptor);
+        private static readonly Action<CompilationStartAnalysisContext> CompilationStartAction = HandleCompilationStart;
+        private static readonly Action<SyntaxTreeAnalysisContext> SyntaxTreeAction = HandleSyntaxTree;
 
         /// <inheritdoc/>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
-        {
-            get
-            {
-                return SupportedDiagnosticsValue;
-            }
-        }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+            ImmutableArray.Create(Descriptor);
 
         /// <inheritdoc/>
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxTreeActionHonorExclusions(this.HandleSyntaxTree);
+            context.RegisterCompilationStartAction(CompilationStartAction);
         }
 
-        private void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
+        private static void HandleCompilationStart(CompilationStartAnalysisContext context)
+        {
+            context.RegisterSyntaxTreeActionHonorExclusions(SyntaxTreeAction);
+        }
+
+        private static void HandleSyntaxTree(SyntaxTreeAnalysisContext context)
         {
             SyntaxNode root = context.Tree.GetCompilationUnitRoot(context.CancellationToken);
             foreach (var trivia in root.DescendantTrivia(descendIntoTrivia: true))
@@ -79,7 +82,7 @@
                 switch (trivia.Kind())
                 {
                 case SyntaxKind.DocumentationCommentExteriorTrivia:
-                    this.HandleDocumentationCommentExteriorTrivia(context, trivia);
+                    HandleDocumentationCommentExteriorTrivia(context, trivia);
                     break;
 
                 default:
@@ -88,7 +91,7 @@
             }
         }
 
-        private void HandleDocumentationCommentExteriorTrivia(SyntaxTreeAnalysisContext context, SyntaxTrivia trivia)
+        private static void HandleDocumentationCommentExteriorTrivia(SyntaxTreeAnalysisContext context, SyntaxTrivia trivia)
         {
             SyntaxToken token = trivia.Token;
             if (token.IsMissing)
@@ -119,7 +122,7 @@
                 switch (lastLeadingTrivia.Kind())
                 {
                 case SyntaxKind.WhitespaceTrivia:
-                    if (lastLeadingTrivia.ToFullString().StartsWith(" "))
+                    if (lastLeadingTrivia.ToFullString().StartsWith(" ", StringComparison.Ordinal))
                     {
                         return;
                     }
@@ -145,7 +148,17 @@
                 return;
 
             case SyntaxKind.XmlTextLiteralToken:
-                if (token.Text.StartsWith(" "))
+                if (token.Text.StartsWith("  ", StringComparison.Ordinal))
+                {
+                    SyntaxKind grandparentKind = token.Parent?.Parent?.Kind() ?? SyntaxKind.None;
+                    if (grandparentKind != SyntaxKind.SingleLineDocumentationCommentTrivia
+                        && grandparentKind != SyntaxKind.MultiLineDocumentationCommentTrivia)
+                    {
+                        // Allow extra indentation for nested text and elements.
+                        return;
+                    }
+                }
+                else if (token.Text.StartsWith(" ", StringComparison.Ordinal))
                 {
                     return;
                 }
